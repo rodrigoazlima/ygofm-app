@@ -205,7 +205,7 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 #m-tip{
   display:none;position:fixed;z-index:800;
   background:#0e0e1c;border:1px solid #333360;
-  border-radius:5px;width:300px;pointer-events:none;
+  border-radius:5px;width:auto;max-width:480px;pointer-events:none;
   box-shadow:0 4px 18px rgba(0,0,0,.9);overflow:hidden;
   font-family:monospace;font-size:11px;
 }
@@ -505,7 +505,7 @@ function hideTip() {
 
 // ── modal row tooltip ────────────────────────────────────
 const mTip = document.getElementById("m-tip");
-let mTipTimer = null;
+let mTipTimer = null, _expandT = null, _expandPartners = null;
 
 function moveMTip(e) {
   const W = window.innerWidth, H = window.innerHeight;
@@ -519,6 +519,8 @@ function moveMTip(e) {
 }
 
 function hideMTip() {
+  clearTimeout(_expandT);
+  _expandPartners = null;
   mTipTimer = setTimeout(() => { mTip.style.display = "none"; }, 60);
 }
 
@@ -554,6 +556,8 @@ function attrIcon(attrIdx, h) {
 
 function showMTipFusesInto(rc, partners, e) {
   clearTimeout(mTipTimer);
+  clearTimeout(_expandT);
+  _expandPartners = partners.length > 8 ? partners : null;
   const typeName = cardTypes[rc.Type] || "";
   const isM = rc.Type < 20;
   mTip.innerHTML =
@@ -563,13 +567,30 @@ function showMTipFusesInto(rc, partners, e) {
     (isM ? `<div class="mt-stats" style="color:${atkColor(rc.Attack)}">ATK ${rc.Attack} / DEF ${rc.Defense}</div>` : "") +
     `<div class="mt-type">${typeIcon(rc.Type, 13)}${escHtml(typeName)}</div></div></div>` +
     `<div class="mt-materials-box"><span class="mt-materials-label">Materials</span><div class="mt-partners-row">` +
-    partners.slice(0, 6).map(p =>
+    partners.slice(0, 8).map(p =>
       `<div class="mt-partner-card">${mCardImg(p, 44)}<div class="mt-partner-name">${escHtml(p.Name)}</div></div>`
     ).join("") +
-    (partners.length > 6 ? `<div class="mt-partner-more">+${partners.length - 6}</div>` : "") +
+    (partners.length > 8 ? `<div class="mt-partner-more">+${partners.length - 8}</div>` : "") +
     `</div></div>`;
   mTip.style.display = "block";
   moveMTip(e);
+  if (_expandPartners) _expandT = setTimeout(_expandMTipMaterials, 700);
+}
+
+function _expandMTipMaterials() {
+  if (!_expandPartners) return;
+  const row = mTip.querySelector(".mt-partners-row");
+  const more = mTip.querySelector(".mt-partner-more");
+  if (!row) return;
+  _expandPartners.slice(8).forEach(p => {
+    const el = document.createElement("div");
+    el.className = "mt-partner-card";
+    el.innerHTML = `${mCardImg(p, 44)}<div class="mt-partner-name">${escHtml(p.Name)}</div>`;
+    row.appendChild(el);
+    _pf(thumbUrl(p)); _pf(fullUrl(p)); _pf(localUrl(p));
+  });
+  if (more) more.remove();
+  _expandPartners = null;
 }
 
 function showMTipCombinesWith(partner, result, e) {
@@ -667,7 +688,7 @@ function updateIncompatiblePanel(lq) {
     if (partnerIds.has(c.Id)) return false;
     const typeName = (cardTypes[c.Type] || "").toLowerCase();
     return c.Name.toLowerCase().includes(lq) || typeName.includes(lq);
-  }).slice(0, 50);
+  }).sort((a, b) => (b.Attack || 0) - (a.Attack || 0)).slice(0, 50);
 
   mIncompatiblePanel.innerHTML = "";
 
@@ -812,6 +833,7 @@ function makeFusesIntoSection(c) {
     const row = document.createElement("div");
     row.className = "fi-group";
     row.dataset.partners = partners.map(p => p.Name.toLowerCase()).join("|");
+    row.dataset.partnerIds = partners.map(p => p.Id).join("|");
     row.dataset.cardId = resId;
 
     // result image
@@ -1105,6 +1127,65 @@ function closeDrop() {
   dropItems = [];
   dropActive = -1;
 }
+
+// ── prefetch ─────────────────────────────────────────────
+const _pfSeen = new Set();
+function _pf(url) { if (url && !_pfSeen.has(url)) { _pfSeen.add(url); new Image().src = url; } }
+function _pfCard(c) { if (!c) return; _pf(thumbUrl(c)); _pf(fullUrl(c)); _pf(localUrl(c)); }
+function _pfCards(arr, max) { const n = Math.min(arr.length, max||60); for (let i=0;i<n;i++) _pfCard(arr[i]); }
+
+let _pfT = null;
+
+searchInput.addEventListener("input", () => {
+  clearTimeout(_pfT);
+  _pfT = setTimeout(() => {
+    const lq = searchInput.value.trim().toLowerCase();
+    if (!lq) return;
+    _pfCards(card_db.filter(c => c.Name.toLowerCase().includes(lq)));
+  }, 80);
+});
+
+mFilter.addEventListener("input", () => {
+  clearTimeout(_pfT);
+  _pfT = setTimeout(() => {
+    if (modalCardId === null) return;
+    const lq = mFilter.value.trim().toLowerCase();
+    if (!lq) return;
+    const seen = new Set(), toFetch = [];
+    const add = c => { if (c && !seen.has(c.Id)) { seen.add(c.Id); toFetch.push(c); } };
+    if (fusionsList[modalCardId]) {
+      for (const fu of fusionsList[modalCardId]) {
+        const rc = byId[fu.result], p = byId[fu.card];
+        if ((rc?.Name||"").toLowerCase().includes(lq)
+          || (cardTypes[rc?.Type]||"").toLowerCase().includes(lq)
+          || (p?.Name||"").toLowerCase().includes(lq)) { add(rc); add(p); }
+      }
+    }
+    if (mat2Idx[modalCardId]) {
+      for (const [mat1Id, resId] of mat2Idx[modalCardId]) {
+        const rc = byId[resId], p = byId[mat1Id];
+        if ((rc?.Name||"").toLowerCase().includes(lq)
+          || (p?.Name||"").toLowerCase().includes(lq)) { add(rc); add(p); }
+      }
+    }
+    _pfCards(toFetch);
+  }, 80);
+});
+
+document.getElementById("grid").addEventListener("mouseover", e => {
+  const cell = e.target.closest(".cell");
+  if (!cell) return;
+  const c = byId[Number(cell.dataset.id)];
+  if (c) { _pf(fullUrl(c)); _pf(localUrl(c)); }
+});
+
+mBody.addEventListener("mouseover", e => {
+  const row = e.target.closest(".fi-group,.cw-row");
+  if (!row) return;
+  _pfCard(byId[Number(row.dataset.cardId)]);
+  if (row.dataset.partnerIds)
+    row.dataset.partnerIds.split("|").slice(0, 8).forEach(id => _pfCard(byId[Number(id)]));
+});
 
 // ── utils ─────────────────────────────────────────────────
 function escHtml(s) {
