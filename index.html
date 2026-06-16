@@ -257,6 +257,7 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 <script src="data/results.js"></script>
 <script src="data/types_and_stars.js"></script>
 <script src="data/local_images.js"></script>
+<script src="data/fandom_images.js"></script>
 
 <script>
 const THUMB = "https://images.ygoprodeck.com/images/cards_cropped";
@@ -305,7 +306,9 @@ function cardCode(c) {
 function thumbUrl(c) { const k = cardCode(c); return k ? THUMB+"/"+k+".jpg" : ""; }
 function fullUrl(c)  { const k = cardCode(c); return k ? FULL+"/"+k+".jpg" : ""; }
 
-function localUrl(c) { return (localImages && localImages[c.Id]) || ""; }
+function localUrl(c) {
+  return (localImages && localImages[c.Id]) || (fandomImages && fandomImages[c.Id]) || "";
+}
 
 function imgEl(src, full, cls, local) {
   if (!src && !full && !local) return null;
@@ -473,9 +476,10 @@ const mName   = document.getElementById("m-name");
 const mStats  = document.getElementById("m-stats");
 const mBody   = document.getElementById("m-body");
 
-const mFilter     = document.getElementById("m-filter");
-const mRightPanel = document.getElementById("m-right-panel");
-const modalEl     = document.getElementById("modal");
+const mFilter           = document.getElementById("m-filter");
+const mIncompatiblePanel = document.getElementById("m-right-panel");
+const modalEl           = document.getElementById("modal");
+let   modalCardId       = null;
 
 document.getElementById("m-close").onclick = closeModal;
 overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
@@ -483,6 +487,7 @@ overlay.addEventListener("click", e => { if (e.target === overlay) closeModal();
 function closeModal() {
   overlay.classList.remove("open");
   mFilter.value = "";
+  modalCardId = null;
   applyPartnerFilter("");
 }
 
@@ -497,30 +502,44 @@ function applyPartnerFilter(q) {
   for (const row of mBody.querySelectorAll(".mf-row")) {
     row.classList.toggle("faded", !!lq && !(row.dataset.materials||"").includes(lq));
   }
-  updateRightPanel(lq);
+  updateIncompatiblePanel(lq);
 }
 
-function updateRightPanel(lq) {
+function updateIncompatiblePanel(lq) {
   if (!lq) {
-    mRightPanel.classList.remove("active");
-    mRightPanel.innerHTML = "";
+    mIncompatiblePanel.classList.remove("active");
+    mIncompatiblePanel.innerHTML = "";
     modalEl.classList.remove("has-panel");
     return;
   }
 
-  const matches = card_db.filter(c => {
+  // Build set of valid partner IDs for current modal card
+  const partnerIds = new Set();
+  if (modalCardId !== null) {
+    if (fusionsList[modalCardId]) {
+      for (const fu of fusionsList[modalCardId]) partnerIds.add(fu.card);
+    }
+    if (mat2Idx[modalCardId]) {
+      for (const [mat1Id] of mat2Idx[modalCardId]) partnerIds.add(mat1Id);
+    }
+    partnerIds.add(modalCardId); // exclude self
+  }
+
+  // Cards matching query that are NOT fusion partners
+  const incompatible = card_db.filter(c => {
+    if (partnerIds.has(c.Id)) return false;
     const typeName = (cardTypes[c.Type] || "").toLowerCase();
     return c.Name.toLowerCase().includes(lq) || typeName.includes(lq);
   }).slice(0, 50);
 
-  mRightPanel.innerHTML = "";
+  mIncompatiblePanel.innerHTML = "";
 
   const titleEl = document.createElement("div");
   titleEl.id = "m-rp-title";
-  titleEl.textContent = "MATERIALS (" + matches.length + (matches.length === 50 ? "+" : "") + ")";
-  mRightPanel.appendChild(titleEl);
+  titleEl.textContent = "INCOMPATIBLE CARDS (" + incompatible.length + (incompatible.length === 50 ? "+" : "") + ")";
+  mIncompatiblePanel.appendChild(titleEl);
 
-  for (const card of matches) {
+  for (const card of incompatible) {
     const row = document.createElement("div");
     row.className = "mp-row";
 
@@ -546,10 +565,10 @@ function updateRightPanel(lq) {
     row.appendChild(info);
 
     row.addEventListener("click", () => openModal(card.Id));
-    mRightPanel.appendChild(row);
+    mIncompatiblePanel.appendChild(row);
   }
 
-  mRightPanel.classList.add("active");
+  mIncompatiblePanel.classList.add("active");
   modalEl.classList.add("has-panel");
 }
 
@@ -560,7 +579,8 @@ function openModal(cardId) {
   if (!c) return;
 
   mFilter.value = "";
-  updateRightPanel("");
+  modalCardId = cardId;
+  updateIncompatiblePanel("");
 
   // header
   const src = fullUrl(c), local = localUrl(c);
