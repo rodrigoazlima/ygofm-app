@@ -38,21 +38,6 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 }
 .sdrop-item:hover,.sdrop-item.active{background:#1e1e3a;color:#fff}
 
-/* ── grid filter ── */
-#filter-bar{
-  padding:6px 12px;background:#0a0a14;
-  border-bottom:1px solid #1a1a2e;
-  position:sticky;top:49px;z-index:390;
-}
-#filter{
-  width:100%;max-width:400px;background:#141420;
-  border:1px solid #2a2a44;color:#ddd;
-  font-family:monospace;font-size:13px;
-  padding:5px 10px;border-radius:4px;outline:none;
-}
-#filter:focus{border-color:#4444aa}
-#filter::placeholder{color:#444}
-
 /* ── grid ── */
 #grid{padding:8px}
 .type-hdr{
@@ -114,6 +99,17 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 }
 #m-close:hover{color:#eee}
 
+/* modal partner filter */
+#m-filter-wrap{padding:7px 12px;background:#0a0a12;border-bottom:1px solid #1a1a2a}
+#m-filter{
+  width:100%;background:#141420;border:1px solid #2a2a44;
+  color:#ddd;font-family:monospace;font-size:12px;
+  padding:5px 10px;border-radius:4px;outline:none;
+}
+#m-filter:focus{border-color:#4444aa}
+#m-filter::placeholder{color:#444}
+.fi-group.faded,.mf-row.faded{opacity:.1;pointer-events:none}
+
 /* modal body sections */
 .m-section{padding:10px 12px;border-bottom:1px solid #1a1a2a}
 .m-section:last-child{border-bottom:none}
@@ -171,14 +167,10 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 <div id="hdr">
   <b>&#9876; YGOFM FUSIONS</b>
   <div id="search-wrap">
-    <input id="card-search" type="text" placeholder="search any card name&#8230;" autocomplete="off" spellcheck="false">
+    <input id="card-search" type="text" placeholder="search or filter cards&#8230;" autocomplete="off" spellcheck="false">
     <div id="search-drop"></div>
   </div>
   <span id="hdr-count"></span>
-</div>
-
-<div id="filter-bar">
-  <input id="filter" type="search" placeholder="filter fusion results&#8230;" spellcheck="false">
 </div>
 
 <div id="loading">Loading card data&#8230;</div>
@@ -204,6 +196,9 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
       </div>
       <button id="m-close" title="Close">&#10005;</button>
     </div>
+    <div id="m-filter-wrap">
+      <input id="m-filter" type="text" placeholder="filter by partner / material name&#8230;" autocomplete="off" spellcheck="false">
+    </div>
     <div id="m-body"></div>
   </div>
 </div>
@@ -213,6 +208,7 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 <script src="data/fusions.js"></script>
 <script src="data/results.js"></script>
 <script src="data/types_and_stars.js"></script>
+<script src="data/local_images.js"></script>
 
 <script>
 const THUMB = "https://images.ygoprodeck.com/images/cards_cropped";
@@ -261,13 +257,16 @@ function cardCode(c) {
 function thumbUrl(c) { const k = cardCode(c); return k ? THUMB+"/"+k+".jpg" : ""; }
 function fullUrl(c)  { const k = cardCode(c); return k ? FULL+"/"+k+".jpg" : ""; }
 
-function imgEl(src, full, cls) {
-  if (!src && !full) return null;
+function localUrl(c) { return (localImages && localImages[c.Id]) || ""; }
+
+function imgEl(src, full, cls, local) {
+  if (!src && !full && !local) return null;
   const img = document.createElement("img");
   img.className = cls;
-  img.src = src || full;
+  img.src = src || full || local;
   img.onerror = () => {
     if (full && img.src !== full) { img.src = full; }
+    else if (local && img.src !== local) { img.src = local; }
     else { img.style.display = "none"; }
   };
   return img;
@@ -275,7 +274,7 @@ function imgEl(src, full, cls) {
 
 function miniThumb(card, cls="fi-thumb") {
   const src = thumbUrl(card), full = fullUrl(card);
-  const el = imgEl(src, full, cls);
+  const el = imgEl(src, full, cls, localUrl(card));
   if (!el) {
     const ph = document.createElement("div");
     ph.className = cls + "-ph";
@@ -344,14 +343,15 @@ function makeCell(c) {
   cell.style.borderBottomColor = atkColor(c.Attack);
   cell.dataset.id = c.Id;
 
-  const src = thumbUrl(c), full = fullUrl(c);
-  if (src || full) {
+  const src = thumbUrl(c), full = fullUrl(c), local = localUrl(c);
+  if (src || full || local) {
     const img = document.createElement("img");
-    img.src = src || full;
+    img.src = src || full || local;
     img.loading = "lazy";
     img.alt = c.Name;
     img.onerror = () => {
       if (full && img.src !== full) img.src = full;
+      else if (local && img.src !== local) img.src = local;
       else img.replaceWith(makePlaceholder(c));
     };
     cell.appendChild(img);
@@ -388,10 +388,13 @@ function showTip(c, e) {
   const isMonster = c.Type < 20;
   tipStat.textContent = (isMonster ? `ATK ${c.Attack} / DEF ${c.Defense} · ` : "") + t;
 
-  const src = fullUrl(c) || thumbUrl(c);
-  if (src) {
-    tipImg.src = src; tipImg.style.display = "block";
-    tipImg.onerror = () => { tipImg.style.display = "none"; };
+  const src = fullUrl(c) || thumbUrl(c), local = localUrl(c);
+  if (src || local) {
+    tipImg.src = src || local; tipImg.style.display = "block";
+    tipImg.onerror = () => {
+      if (local && tipImg.src !== local) { tipImg.src = local; }
+      else { tipImg.style.display = "none"; }
+    };
   } else {
     tipImg.style.display = "none";
   }
@@ -422,19 +425,44 @@ const mName   = document.getElementById("m-name");
 const mStats  = document.getElementById("m-stats");
 const mBody   = document.getElementById("m-body");
 
+const mFilter = document.getElementById("m-filter");
+
 document.getElementById("m-close").onclick = closeModal;
 overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
 
-function closeModal() { overlay.classList.remove("open"); }
+function closeModal() {
+  overlay.classList.remove("open");
+  mFilter.value = "";
+  applyPartnerFilter("");
+}
+
+function applyPartnerFilter(q) {
+  const lq = q.toLowerCase();
+  for (const row of mBody.querySelectorAll(".fi-group")) {
+    row.classList.toggle("faded", !!lq && !(row.dataset.partners||"").includes(lq));
+  }
+  for (const row of mBody.querySelectorAll(".mf-row")) {
+    row.classList.toggle("faded", !!lq && !(row.dataset.materials||"").includes(lq));
+  }
+}
+
+mFilter.addEventListener("input", () => applyPartnerFilter(mFilter.value.trim()));
 
 function openModal(cardId) {
   const c = byId[cardId];
   if (!c) return;
 
+  mFilter.value = "";
+
   // header
-  const src = fullUrl(c);
-  if (src) { mImg.src = src; mImg.style.display = "block"; mImg.onerror = ()=>mImg.style.display="none"; }
-  else mImg.style.display = "none";
+  const src = fullUrl(c), local = localUrl(c);
+  if (src || local) {
+    mImg.src = src || local; mImg.style.display = "block";
+    mImg.onerror = () => {
+      if (local && mImg.src !== local) { mImg.src = local; }
+      else { mImg.style.display = "none"; }
+    };
+  } else mImg.style.display = "none";
   mName.textContent = c.Name;
   const t = cardTypes[c.Type] || "";
   const isM = c.Type < 20;
@@ -495,6 +523,7 @@ function makeFusesIntoSection(c) {
 
     const row = document.createElement("div");
     row.className = "fi-group";
+    row.dataset.partners = partners.map(p => p.Name.toLowerCase()).join("|");
 
     // result image
     row.appendChild(miniThumb(rc));
@@ -559,6 +588,7 @@ function makeMadeFromSection(c) {
 
     const row = document.createElement("div");
     row.className = "mf-row";
+    row.dataset.materials = [m1.Name, m2.Name].map(n => n.toLowerCase()).join("|");
 
     row.appendChild(miniThumb(m1));
 
@@ -599,6 +629,7 @@ function initSearch() {
 
   searchInput.addEventListener("input", () => {
     const q = searchInput.value.trim().toLowerCase();
+    buildGrid(q);
     if (!q) { closeDrop(); return; }
     dropFiltered = allNames.filter(n => n.name.toLowerCase().includes(q)).slice(0, 20);
     renderDrop(dropFiltered);
@@ -648,7 +679,9 @@ function setActive(idx) {
 function selectCard(id) {
   closeDrop();
   searchInput.value = "";
+  buildGrid();
   openModal(id);
+  setTimeout(() => mFilter.focus(), 50);
 }
 
 function closeDrop() {
@@ -657,11 +690,6 @@ function closeDrop() {
   dropItems = [];
   dropActive = -1;
 }
-
-// ── grid filter ───────────────────────────────────────────
-document.getElementById("filter").addEventListener("input", function() {
-  buildGrid(this.value);
-});
 
 // ── utils ─────────────────────────────────────────────────
 function escHtml(s) {
