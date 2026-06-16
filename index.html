@@ -283,6 +283,8 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 <script src="data/types_and_stars.js"></script>
 <script src="data/local_images.js"></script>
 <script src="data/fandom_images.js"></script>
+<script src="data/attribute_images.js"></script>
+<script src="data/type_images.js"></script>
 
 <script>
 const THUMB = "https://images.ygoprodeck.com/images/cards_cropped";
@@ -397,7 +399,7 @@ function buildGrid(filterQ) {
     const hdr = document.createElement("div");
     hdr.className = "type-hdr";
     hdr.style.cssText = `color:${color};border-color:${color};background:${color}22`;
-    hdr.innerHTML = `${t.toUpperCase()} <span style="float:right;opacity:.7">${cards.length}</span>`;
+    hdr.innerHTML = typeIcon(cards[0].Type, 14) + `${t.toUpperCase()} <span style="float:right;opacity:.7">${cards.length}</span>`;
     gridEl.appendChild(hdr);
 
     // card grid
@@ -462,7 +464,7 @@ function showTip(c, e) {
   tipName.textContent = c.Name;
   const t = cardTypes[c.Type]||"";
   const isMonster = c.Type < 20;
-  tipStat.textContent = (isMonster ? `ATK ${c.Attack} / DEF ${c.Defense} · ` : "") + t;
+  tipStat.innerHTML = (isMonster ? `ATK ${c.Attack} / DEF ${c.Defense} &nbsp;` : "") + typeIcon(c.Type, 13) + escHtml(t);
 
   const src = fullUrl(c) || thumbUrl(c), local = localUrl(c);
   if (src || local) {
@@ -528,6 +530,21 @@ function mCardImg(card, w) {
   return `<img src="${escHtml(src)}" style="width:${w}px;height:auto;border-radius:2px;display:block;margin:0 auto 3px" onerror="_mImgFb(this,'${f}','${l}')">`;
 }
 
+function typeIcon(typeIdx, h) {
+  const url = typeImages && typeImages[typeIdx];
+  if (!url) return "";
+  h = h || 14;
+  return `<img src="${url}" style="width:${h}px;height:${h}px;vertical-align:middle;margin-right:3px;display:inline-block" title="${escHtml(cardTypes[typeIdx]||"")}">`;
+}
+
+function attrIcon(attrIdx, h) {
+  const url = attributeImages && attributeImages[attrIdx];
+  if (!url) return "";
+  h = h || 14;
+  const names = ["Dark","Earth","Fire","Light","Water","Wind","Divine"];
+  return `<img src="${url}" style="width:${h}px;height:${h}px;vertical-align:middle;margin-right:3px;display:inline-block" title="${names[attrIdx]||""}">`;
+}
+
 function showMTipFusesInto(rc, partners, e) {
   clearTimeout(mTipTimer);
   const typeName = cardTypes[rc.Type] || "";
@@ -537,7 +554,7 @@ function showMTipFusesInto(rc, partners, e) {
     `<div class="mt-info">` +
     `<div class="mt-name">${escHtml(rc.Name)}</div>` +
     (isM ? `<div class="mt-stats" style="color:${atkColor(rc.Attack)}">ATK ${rc.Attack} / DEF ${rc.Defense}</div>` : "") +
-    `<div class="mt-type">${typeName}</div></div></div>` +
+    `<div class="mt-type">${typeIcon(rc.Type, 13)}${escHtml(typeName)}</div></div></div>` +
     `<div class="mt-partners">with: ${partners.map(p => escHtml(p.Name)).join(" &middot; ")}</div>`;
   mTip.style.display = "block";
   moveMTip(e);
@@ -551,12 +568,12 @@ function showMTipCombinesWith(partner, result, e) {
     `<div class="mt-pair">` +
     `<div class="mt-card-sm">${mCardImg(partner,66)}` +
     `<div class="mt-name-sm">${escHtml(partner.Name)}</div>` +
-    `<div class="mt-sub-sm">${pType}${partner.Type < 20 ? " &middot; " + partner.Attack : ""}</div></div>` +
+    `<div class="mt-sub-sm">${typeIcon(partner.Type,12)}${escHtml(pType)}${partner.Type < 20 ? " &middot; " + partner.Attack : ""}</div></div>` +
     `<span class="mt-sep">&rarr;</span>` +
     (result
       ? `<div class="mt-card-sm">${mCardImg(result,66)}` +
         `<div class="mt-name-sm">${escHtml(result.Name)}</div>` +
-        `<div class="mt-sub-sm" style="color:${result.Type < 20 ? atkColor(result.Attack) : "#555"}">${rType}${result.Type < 20 ? " &middot; " + result.Attack : ""}</div></div>`
+        `<div class="mt-sub-sm" style="color:${result.Type < 20 ? atkColor(result.Attack) : "#555"}">${typeIcon(result.Type,12)}${escHtml(rType)}${result.Type < 20 ? " &middot; " + result.Attack : ""}</div></div>`
       : "") +
     `</div>`;
   mTip.style.display = "block";
@@ -666,7 +683,7 @@ function updateIncompatiblePanel(lq) {
     type.className = "mp-type";
     const typeName = cardTypes[card.Type] || "";
     const isM = card.Type < 20;
-    type.textContent = typeName + (isM ? " · " + card.Attack : "");
+    type.innerHTML = typeIcon(card.Type, 12) + escHtml(typeName) + (isM ? " · " + card.Attack : "");
 
     info.appendChild(name);
     info.appendChild(type);
@@ -727,7 +744,7 @@ function openModal(cardId) {
   const attrNames = {0:"Dark",1:"Earth",2:"Fire",3:"Light",4:"Water",5:"Wind",6:"Divine"};
   mStats.innerHTML =
     (isM ? `ATK <b style="color:${atkColor(c.Attack)}">${c.Attack}</b> &nbsp; DEF ${c.Defense}<br>` : "") +
-    `${t}` + (c.Attribute != null ? ` &middot; ${attrNames[c.Attribute]||""}` : "");
+    typeIcon(c.Type, 15) + escHtml(t) + (c.Attribute != null ? ` &middot; ${attrIcon(c.Attribute, 15)}${escHtml(attrNames[c.Attribute]||"")}` : "");
 
   mBody.innerHTML = "";
   mBody.appendChild(makeFusesIntoSection(c));
@@ -797,7 +814,7 @@ function makeFusesIntoSection(c) {
     rname.innerHTML = `${escHtml(rc.Name)}<span class="fi-atk">${isM ? rc.Attack : ""}</span>`;
     const rsub = document.createElement("div");
     rsub.className = "fi-result-sub";
-    rsub.textContent = cardTypes[rc.Type] || "";
+    rsub.innerHTML = typeIcon(rc.Type, 12) + escHtml(cardTypes[rc.Type] || "");
     const rpart = document.createElement("div");
     rpart.className = "fi-partners";
     if (partners.length <= 4) {
@@ -861,17 +878,17 @@ function makeCombinesWithSection(c) {
   // Type compatibility chips
   const typeCounts = {};
   for (const p of partners) {
-    const t = cardTypes[p.Type] || "Unknown";
-    typeCounts[t] = (typeCounts[t] || 0) + 1;
+    typeCounts[p.Type] = (typeCounts[p.Type] || 0) + 1;
   }
   const typesBar = document.createElement("div");
   typesBar.className = "cw-types";
-  for (const [t, count] of Object.entries(typeCounts).sort((a, b) => b[1] - a[1])) {
+  for (const [tidx, count] of Object.entries(typeCounts).sort((a, b) => b[1] - a[1])) {
+    const t = cardTypes[tidx] || "Unknown";
     const color = TYPE_COLORS[t] || "#555";
     const chip = document.createElement("span");
     chip.className = "cw-type-chip";
     chip.style.cssText = `color:${color};background:${color}22;border:1px solid ${color}55`;
-    chip.textContent = t + " " + count;
+    chip.innerHTML = typeIcon(Number(tidx), 13) + escHtml(t) + " " + count;
     typesBar.appendChild(chip);
   }
   sec.appendChild(typesBar);
@@ -896,7 +913,7 @@ function makeCombinesWithSection(c) {
     pName.textContent = p.Name;
     const pSub = document.createElement("div");
     pSub.className = "mp-type";
-    pSub.textContent = (cardTypes[p.Type] || "") + (p.Type < 20 ? " \xb7 " + p.Attack : "");
+    pSub.innerHTML = typeIcon(p.Type, 12) + escHtml(cardTypes[p.Type] || "") + (p.Type < 20 ? " \xb7 " + p.Attack : "");
     pInfo.appendChild(pName);
     pInfo.appendChild(pSub);
     row.appendChild(pInfo);
