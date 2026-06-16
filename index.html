@@ -81,13 +81,16 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 #overlay.open{display:block}
 #modal{
   background:#10101a;border:1px solid #2a2a3a;border-radius:6px;
-  max-width:600px;margin:0 auto;overflow:hidden;
+  max-width:600px;margin:0 auto;
+  transition:max-width .2s;
 }
+#modal.has-panel{max-width:900px}
 
 /* modal header */
 #m-head{
   display:flex;gap:12px;align-items:flex-start;
   padding:12px;background:#0c0c16;border-bottom:1px solid #1e1e2e;
+  border-radius:6px 6px 0 0;
 }
 #m-img{width:120px;flex-shrink:0;border:1px solid #2a2a3a;border-radius:3px}
 #m-info{flex:1;min-width:0}
@@ -108,16 +111,53 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 }
 #m-filter:focus{border-color:#4444aa}
 #m-filter::placeholder{color:#444}
-.fi-group.faded,.mf-row.faded{opacity:.1;pointer-events:none}
+.fi-group.faded,.mf-row.faded,.cw-row.faded{opacity:.15;pointer-events:none;order:1}
 
 /* modal body sections */
-.m-section{padding:10px 12px;border-bottom:1px solid #1a1a2a}
+.m-section{padding:10px 12px;border-bottom:1px solid #1a1a2a;display:flex;flex-direction:column}
 .m-section:last-child{border-bottom:none}
+
+/* body + right panel layout */
+#m-content-wrap{display:flex;align-items:flex-start}
+#m-body{flex:1;min-width:0}
+
+/* right panel */
+#m-right-panel{
+  width:210px;flex-shrink:0;
+  border-left:1px solid #1a1a2a;
+  display:none;flex-direction:column;
+  position:sticky;top:0;align-self:flex-start;
+  max-height:100vh;overflow-y:auto;
+  background:#0c0c14;
+}
+#m-right-panel.active{display:flex}
+#m-rp-title{
+  position:sticky;top:0;z-index:1;
+  padding:8px 10px 6px;
+  font-size:10px;font-weight:bold;letter-spacing:.6px;
+  color:#5577aa;background:#0c0c14;
+  border-bottom:1px solid #1a1a2a;
+}
+.mp-row{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 8px;border-bottom:1px solid #0f0f1c;cursor:pointer;
+}
+.mp-row:hover{background:#141420}
+.mp-name{font-size:11px;color:#ccc;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-type{font-size:9px;color:#555;margin-top:1px}
 .m-section-title{
   font-size:11px;font-weight:bold;letter-spacing:.6px;
   color:#6677aa;margin-bottom:8px;
 }
 .m-section-title.orange{color:#aa7733}
+.m-section-title.teal{color:#3a9a88}
+
+/* combines-with rows */
+.cw-row{
+  display:flex;align-items:center;gap:8px;
+  padding:4px 0;border-bottom:1px solid #14141e;cursor:pointer;
+}
+.cw-row:hover{background:#0e0e18}
 
 /* fuses-into rows */
 .fi-group{
@@ -197,9 +237,12 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
       <button id="m-close" title="Close">&#10005;</button>
     </div>
     <div id="m-filter-wrap">
-      <input id="m-filter" type="text" placeholder="filter by partner / material name&#8230;" autocomplete="off" spellcheck="false">
+      <input id="m-filter" type="text" placeholder="search fusion partner or material&#8230;" autocomplete="off" spellcheck="false">
     </div>
-    <div id="m-body"></div>
+    <div id="m-content-wrap">
+      <div id="m-body"></div>
+      <div id="m-right-panel"></div>
+    </div>
   </div>
 </div>
 
@@ -425,7 +468,9 @@ const mName   = document.getElementById("m-name");
 const mStats  = document.getElementById("m-stats");
 const mBody   = document.getElementById("m-body");
 
-const mFilter = document.getElementById("m-filter");
+const mFilter     = document.getElementById("m-filter");
+const mRightPanel = document.getElementById("m-right-panel");
+const modalEl     = document.getElementById("modal");
 
 document.getElementById("m-close").onclick = closeModal;
 overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
@@ -437,13 +482,70 @@ function closeModal() {
 }
 
 function applyPartnerFilter(q) {
-  const lq = q.toLowerCase();
+  const lq = q.toLowerCase().trim();
   for (const row of mBody.querySelectorAll(".fi-group")) {
+    row.classList.toggle("faded", !!lq && !(row.dataset.partners||"").includes(lq));
+  }
+  for (const row of mBody.querySelectorAll(".cw-row")) {
     row.classList.toggle("faded", !!lq && !(row.dataset.partners||"").includes(lq));
   }
   for (const row of mBody.querySelectorAll(".mf-row")) {
     row.classList.toggle("faded", !!lq && !(row.dataset.materials||"").includes(lq));
   }
+  updateRightPanel(lq);
+}
+
+function updateRightPanel(lq) {
+  if (!lq) {
+    mRightPanel.classList.remove("active");
+    mRightPanel.innerHTML = "";
+    modalEl.classList.remove("has-panel");
+    return;
+  }
+
+  const matches = card_db.filter(c => {
+    const typeName = (cardTypes[c.Type] || "").toLowerCase();
+    return c.Name.toLowerCase().includes(lq) || typeName.includes(lq);
+  }).slice(0, 50);
+
+  mRightPanel.innerHTML = "";
+
+  const titleEl = document.createElement("div");
+  titleEl.id = "m-rp-title";
+  titleEl.textContent = "MATERIALS (" + matches.length + (matches.length === 50 ? "+" : "") + ")";
+  mRightPanel.appendChild(titleEl);
+
+  for (const card of matches) {
+    const row = document.createElement("div");
+    row.className = "mp-row";
+
+    const thumb = miniThumb(card, "fi-thumb");
+    thumb.style.cssText = "width:32px;height:32px;flex-shrink:0";
+    row.appendChild(thumb);
+
+    const info = document.createElement("div");
+    info.style.cssText = "flex:1;min-width:0";
+
+    const name = document.createElement("div");
+    name.className = "mp-name";
+    name.textContent = card.Name;
+
+    const type = document.createElement("div");
+    type.className = "mp-type";
+    const typeName = cardTypes[card.Type] || "";
+    const isM = card.Type < 20;
+    type.textContent = typeName + (isM ? " · " + card.Attack : "");
+
+    info.appendChild(name);
+    info.appendChild(type);
+    row.appendChild(info);
+
+    row.addEventListener("click", () => openModal(card.Id));
+    mRightPanel.appendChild(row);
+  }
+
+  mRightPanel.classList.add("active");
+  modalEl.classList.add("has-panel");
 }
 
 mFilter.addEventListener("input", () => applyPartnerFilter(mFilter.value.trim()));
@@ -453,6 +555,7 @@ function openModal(cardId) {
   if (!c) return;
 
   mFilter.value = "";
+  updateRightPanel("");
 
   // header
   const src = fullUrl(c), local = localUrl(c);
@@ -473,6 +576,7 @@ function openModal(cardId) {
 
   mBody.innerHTML = "";
   mBody.appendChild(makeFusesIntoSection(c));
+  mBody.appendChild(makeCombinesWithSection(c));
   mBody.appendChild(makeMadeFromSection(c));
 
   overlay.classList.add("open");
@@ -556,6 +660,68 @@ function makeFusesIntoSection(c) {
     row.style.cursor = "pointer";
     row.addEventListener("click", () => openModal(resId));
 
+    sec.appendChild(row);
+  }
+
+  return sec;
+}
+
+// "Combines With": all unique partner cards this card can fuse with
+function makeCombinesWithSection(c) {
+  const sec = document.createElement("div");
+  sec.className = "m-section";
+
+  const partnerIds = new Set();
+  if (fusionsList[c.Id]) {
+    for (const fu of fusionsList[c.Id]) partnerIds.add(fu.card);
+  }
+  if (mat2Idx[c.Id]) {
+    for (const [mat1Id] of mat2Idx[c.Id]) partnerIds.add(mat1Id);
+  }
+
+  const partners = [...partnerIds].map(id => byId[id]).filter(Boolean);
+  partners.sort((a, b) => (b.Attack || 0) - (a.Attack || 0));
+
+  const title = document.createElement("div");
+  title.className = "m-section-title teal";
+  title.textContent = `⬡ COMBINES WITH (${partners.length} materials)`;
+  sec.appendChild(title);
+
+  if (partners.length === 0) {
+    const em = document.createElement("div");
+    em.className = "empty-msg";
+    em.textContent = "No fusion partners found.";
+    sec.appendChild(em);
+    return sec;
+  }
+
+  for (const p of partners) {
+    const row = document.createElement("div");
+    row.className = "cw-row";
+    row.dataset.partners = p.Name.toLowerCase();
+
+    const thumb = miniThumb(p, "fi-thumb");
+    thumb.style.cssText = "width:32px;height:32px;flex-shrink:0";
+    row.appendChild(thumb);
+
+    const info = document.createElement("div");
+    info.style.cssText = "flex:1;min-width:0";
+
+    const name = document.createElement("div");
+    name.className = "mp-name";
+    name.textContent = p.Name;
+
+    const sub = document.createElement("div");
+    sub.className = "mp-type";
+    const typeName = cardTypes[p.Type] || "";
+    const isM = p.Type < 20;
+    sub.textContent = typeName + (isM ? " \xb7 " + p.Attack : "");
+
+    info.appendChild(name);
+    info.appendChild(sub);
+    row.appendChild(info);
+
+    row.addEventListener("click", () => openModal(p.Id));
     sec.appendChild(row);
   }
 
