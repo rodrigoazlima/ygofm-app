@@ -201,6 +201,28 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 
 .empty-msg{color:#444;font-size:11px;padding:4px 0}
 
+/* ── modal row tooltip ── */
+#m-tip{
+  display:none;position:fixed;z-index:800;
+  background:#0e0e1c;border:1px solid #333360;
+  border-radius:5px;width:300px;pointer-events:none;
+  box-shadow:0 4px 18px rgba(0,0,0,.9);overflow:hidden;
+  font-family:monospace;font-size:11px;
+}
+.mt-header{display:flex;gap:8px;align-items:flex-start;padding:8px;background:#0a0a14;border-bottom:1px solid #1a1a2a}
+.mt-img{width:80px;height:auto;flex-shrink:0;border-radius:2px;display:block}
+.mt-info{flex:1;min-width:0}
+.mt-name{font-size:12px;font-weight:bold;color:#eee;margin-bottom:2px}
+.mt-stats{font-size:10px;color:#777;margin-top:1px}
+.mt-type{font-size:10px;color:#555}
+.mt-partners{padding:6px 8px;font-size:10px;color:#5577aa;border-top:1px solid #1a1a2a;line-height:1.5}
+.mt-pair{display:flex;align-items:center;gap:4px;padding:8px;justify-content:center}
+.mt-card-sm{text-align:center;flex:1;min-width:0}
+.mt-img-sm{width:66px;height:auto;border-radius:2px;display:block;margin:0 auto 3px}
+.mt-name-sm{font-size:9px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-sub-sm{font-size:9px;color:#555;margin-top:1px}
+.mt-sep{color:#333;font-size:16px;flex-shrink:0;padding:0 2px}
+
 /* loading */
 #loading{
   text-align:center;padding:40px;color:#444;font-size:14px;letter-spacing:1px;
@@ -229,6 +251,9 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
     <div id="tip-stats"></div>
   </div>
 </div>
+
+<!-- modal row tooltip -->
+<div id="m-tip"></div>
 
 <!-- modal -->
 <div id="overlay">
@@ -469,6 +494,80 @@ function hideTip() {
   tipTimer = setTimeout(() => { tip.style.display = "none"; }, 80);
 }
 
+// ── modal row tooltip ────────────────────────────────────
+const mTip = document.getElementById("m-tip");
+let mTipTimer = null;
+
+function moveMTip(e) {
+  const W = window.innerWidth, H = window.innerHeight;
+  const tw = 300, th = mTip.offsetHeight;
+  let x = e.clientX + 16, y = e.clientY - 8;
+  if (x + tw > W) x = e.clientX - tw - 12;
+  if (y + th > H) y = H - th - 4;
+  if (y < 0) y = 4;
+  mTip.style.left = x + "px";
+  mTip.style.top  = y + "px";
+}
+
+function hideMTip() {
+  mTipTimer = setTimeout(() => { mTip.style.display = "none"; }, 60);
+}
+
+function mCardImg(card, w) {
+  const src = fullUrl(card) || localUrl(card);
+  if (!src) return `<div style="width:${w}px;height:${w}px;background:#0a0a12;border-radius:2px;display:block;margin:0 auto"></div>`;
+  return `<img src="${escHtml(src)}" style="width:${w}px;height:auto;border-radius:2px;display:block;margin:0 auto" onerror="this.style.display='none'">`;
+}
+
+function showMTipFusesInto(rc, partners, e) {
+  clearTimeout(mTipTimer);
+  const typeName = cardTypes[rc.Type] || "";
+  const isM = rc.Type < 20;
+  mTip.innerHTML =
+    `<div class="mt-header">${mCardImg(rc,80)}` +
+    `<div class="mt-info">` +
+    `<div class="mt-name">${escHtml(rc.Name)}</div>` +
+    (isM ? `<div class="mt-stats" style="color:${atkColor(rc.Attack)}">ATK ${rc.Attack} / DEF ${rc.Defense}</div>` : "") +
+    `<div class="mt-type">${typeName}</div></div></div>` +
+    `<div class="mt-partners">with: ${partners.map(p => escHtml(p.Name)).join(" &middot; ")}</div>`;
+  mTip.style.display = "block";
+  moveMTip(e);
+}
+
+function showMTipCombinesWith(partner, result, e) {
+  clearTimeout(mTipTimer);
+  const pType = cardTypes[partner.Type] || "";
+  const rType = result ? (cardTypes[result.Type] || "") : "";
+  mTip.innerHTML =
+    `<div class="mt-pair">` +
+    `<div class="mt-card-sm">${mCardImg(partner,66)}` +
+    `<div class="mt-name-sm">${escHtml(partner.Name)}</div>` +
+    `<div class="mt-sub-sm">${pType}${partner.Type < 20 ? " &middot; " + partner.Attack : ""}</div></div>` +
+    `<span class="mt-sep">&rarr;</span>` +
+    (result
+      ? `<div class="mt-card-sm">${mCardImg(result,66)}` +
+        `<div class="mt-name-sm">${escHtml(result.Name)}</div>` +
+        `<div class="mt-sub-sm" style="color:${result.Type < 20 ? atkColor(result.Attack) : "#555"}">${rType}${result.Type < 20 ? " &middot; " + result.Attack : ""}</div></div>`
+      : "") +
+    `</div>`;
+  mTip.style.display = "block";
+  moveMTip(e);
+}
+
+function showMTipMadeFrom(m1, m2, result, e) {
+  clearTimeout(mTipTimer);
+  mTip.innerHTML =
+    `<div class="mt-pair">` +
+    `<div class="mt-card-sm">${mCardImg(m1,60)}<div class="mt-name-sm">${escHtml(m1.Name)}</div></div>` +
+    `<span class="mt-sep" style="font-size:14px">+</span>` +
+    `<div class="mt-card-sm">${mCardImg(m2,60)}<div class="mt-name-sm">${escHtml(m2.Name)}</div></div>` +
+    `<span class="mt-sep">&rarr;</span>` +
+    `<div class="mt-card-sm">${mCardImg(result,60)}<div class="mt-name-sm">${escHtml(result.Name)}</div></div>` +
+    `</div>`;
+  mTip.style.display = "block";
+  moveMTip(e);
+}
+
 // ── modal ─────────────────────────────────────────────────
 const overlay = document.getElementById("overlay");
 const mImg    = document.getElementById("m-img");
@@ -583,6 +682,19 @@ mFilter.addEventListener("keydown", e => {
   }
 });
 
+// Global key capture → route printable chars to active search input
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key.length !== 1) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  const target = overlay.classList.contains("open") ? mFilter : searchInput;
+  target.focus();
+  target.value += e.key;
+  target.dispatchEvent(new Event("input"));
+  e.preventDefault();
+});
+
 function openModal(cardId) {
   const c = byId[cardId];
   if (!c) return;
@@ -691,8 +803,10 @@ function makeFusesIntoSection(c) {
 
     row.appendChild(info);
 
-    // click result → open its modal
     row.style.cursor = "pointer";
+    row.addEventListener("mouseenter", e => showMTipFusesInto(rc, partners, e));
+    row.addEventListener("mousemove",  moveMTip);
+    row.addEventListener("mouseleave", hideMTip);
     row.addEventListener("click", () => openModal(resId));
 
     sec.appendChild(row);
@@ -802,6 +916,9 @@ function makeCombinesWithSection(c) {
       row.appendChild(rInfo);
     }
 
+    row.addEventListener("mouseenter", e => showMTipCombinesWith(p, rc, e));
+    row.addEventListener("mousemove",  moveMTip);
+    row.addEventListener("mouseleave", hideMTip);
     row.addEventListener("click", () => openModal(p.Id));
     sec.appendChild(row);
   }
@@ -860,6 +977,10 @@ function makeMadeFromSection(c) {
     n2.style.cursor = "pointer";
     n2.addEventListener("click", () => openModal(m2.Id));
     row.appendChild(n2);
+
+    row.addEventListener("mouseenter", e => showMTipMadeFrom(m1, m2, c, e));
+    row.addEventListener("mousemove",  moveMTip);
+    row.addEventListener("mouseleave", hideMTip);
 
     sec.appendChild(row);
   }
