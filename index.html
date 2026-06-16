@@ -513,10 +513,19 @@ function hideMTip() {
   mTipTimer = setTimeout(() => { mTip.style.display = "none"; }, 60);
 }
 
+// Global fallback handler for tooltip img elements (called from onerror attribute)
+window._mImgFb = function(el, full, local) {
+  if (full && el.src !== full) { el.src = full; }
+  else if (local && el.src !== local) { el.src = local; }
+  else { el.style.display = "none"; }
+};
+
 function mCardImg(card, w) {
-  const src = fullUrl(card) || localUrl(card);
-  if (!src) return `<div style="width:${w}px;height:${w}px;background:#0a0a12;border-radius:2px;display:block;margin:0 auto"></div>`;
-  return `<img src="${escHtml(src)}" style="width:${w}px;height:auto;border-radius:2px;display:block;margin:0 auto" onerror="this.style.display='none'">`;
+  const thumb = thumbUrl(card), full = fullUrl(card), local = localUrl(card);
+  const src = thumb || full || local;
+  if (!src) return `<div style="width:${w}px;height:${w}px;background:#0a0a12;border-radius:2px;display:block;margin:0 auto 3px"></div>`;
+  const f = escHtml(full || ""), l = escHtml(local || "");
+  return `<img src="${escHtml(src)}" style="width:${w}px;height:auto;border-radius:2px;display:block;margin:0 auto 3px" onerror="_mImgFb(this,'${f}','${l}')">`;
 }
 
 function showMTipFusesInto(rc, partners, e) {

@@ -56,6 +56,7 @@ var fandomImages = {
   "409": "https://static.wikia.nocookie.net/yugioh/images/9/98/MetalDragon-FMR-EN-VG.png/revision/latest?cb=20131221161926",
   "412": "https://static.wikia.nocookie.net/yugioh/images/c/cf/GigaTechWolf-MRD-EN-C-UE-25thAnniversaryEdition.png/revision/latest?cb=20240805111431",
   "413": "https://static.wikia.nocookie.net/yugioh/images/8/83/CyberSoldier-FMR-EN-VG.png/revision/latest?cb=20131221161754",
+  "421": "https://static.wikia.nocookie.net/yugioh/images/7/79/CyberCommander-V6-JP-C.jpg",
   "423": "https://static.wikia.nocookie.net/yugioh/images/2/2d/DiceArmadillo-FMR-EN-VG.png/revision/latest?cb=20131221161756",
   "425": "https://static.wikia.nocookie.net/yugioh/images/e/e1/ThunderDragon-FMR-EN-VG.png/revision/latest?cb=20131221161931",
   "426": "https://static.wikia.nocookie.net/yugioh/images/7/78/StoneD-FMR-EN-VG.png/revision/latest?cb=20131221161930",
