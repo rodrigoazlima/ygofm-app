@@ -574,6 +574,15 @@ function updateIncompatiblePanel(lq) {
 
 mFilter.addEventListener("input", () => applyPartnerFilter(mFilter.value.trim()));
 
+mFilter.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const visible = [...mBody.querySelectorAll(".fi-group:not(.faded),.cw-row:not(.faded),.mf-row:not(.faded)")];
+  if (visible.length === 1 && visible[0].dataset.cardId) {
+    e.preventDefault();
+    openModal(Number(visible[0].dataset.cardId));
+  }
+});
+
 function openModal(cardId) {
   const c = byId[cardId];
   if (!c) return;
@@ -653,6 +662,7 @@ function makeFusesIntoSection(c) {
     const row = document.createElement("div");
     row.className = "fi-group";
     row.dataset.partners = partners.map(p => p.Name.toLowerCase()).join("|");
+    row.dataset.cardId = resId;
 
     // result image
     row.appendChild(miniThumb(rc));
@@ -749,6 +759,7 @@ function makeCombinesWithSection(c) {
     const row = document.createElement("div");
     row.className = "cw-row";
     row.dataset.partners = p.Name.toLowerCase();
+    row.dataset.cardId = p.Id;
 
     // Partner
     const pThumb = miniThumb(p, "fi-thumb");
@@ -825,6 +836,7 @@ function makeMadeFromSection(c) {
     const row = document.createElement("div");
     row.className = "mf-row";
     row.dataset.materials = [m1.Name, m2.Name].map(n => n.toLowerCase()).join("|");
+    row.dataset.cardId = m1.Id;
 
     row.appendChild(miniThumb(m1));
 
