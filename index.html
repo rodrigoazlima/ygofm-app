@@ -154,10 +154,15 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 
 /* combines-with rows */
 .cw-row{
-  display:flex;align-items:center;gap:8px;
+  display:flex;align-items:center;gap:6px;
   padding:4px 0;border-bottom:1px solid #14141e;cursor:pointer;
 }
 .cw-row:hover{background:#0e0e18}
+.cw-arrow{color:#333;font-size:11px;flex-shrink:0;padding:0 2px}
+.cw-result-info{flex-shrink:0;width:90px;min-width:0}
+.cw-result-name{font-size:10px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-types{display:flex;flex-wrap:wrap;gap:3px;padding:6px 0 8px;border-bottom:1px solid #1a1a2a;margin-bottom:2px}
+.cw-type-chip{font-size:9px;font-weight:bold;letter-spacing:.3px;padding:2px 5px;border-radius:3px;white-space:nowrap}
 
 /* fuses-into rows */
 .fi-group{
@@ -666,20 +671,25 @@ function makeFusesIntoSection(c) {
   return sec;
 }
 
-// "Combines With": all unique partner cards this card can fuse with
+// "Combines With": all unique partner cards this card can fuse with, plus the fusion result
 function makeCombinesWithSection(c) {
   const sec = document.createElement("div");
   sec.className = "m-section";
 
-  const partnerIds = new Set();
+  // Build partner → resultId map (first-wins dedup)
+  const partnerResult = {};
   if (fusionsList[c.Id]) {
-    for (const fu of fusionsList[c.Id]) partnerIds.add(fu.card);
+    for (const fu of fusionsList[c.Id]) {
+      if (!(fu.card in partnerResult)) partnerResult[fu.card] = fu.result;
+    }
   }
   if (mat2Idx[c.Id]) {
-    for (const [mat1Id] of mat2Idx[c.Id]) partnerIds.add(mat1Id);
+    for (const [mat1Id, resId] of mat2Idx[c.Id]) {
+      if (!(mat1Id in partnerResult)) partnerResult[mat1Id] = resId;
+    }
   }
 
-  const partners = [...partnerIds].map(id => byId[id]).filter(Boolean);
+  const partners = Object.keys(partnerResult).map(id => byId[Number(id)]).filter(Boolean);
   partners.sort((a, b) => (b.Attack || 0) - (a.Attack || 0));
 
   const title = document.createElement("div");
@@ -695,31 +705,71 @@ function makeCombinesWithSection(c) {
     return sec;
   }
 
+  // Type compatibility chips
+  const typeCounts = {};
   for (const p of partners) {
+    const t = cardTypes[p.Type] || "Unknown";
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+  const typesBar = document.createElement("div");
+  typesBar.className = "cw-types";
+  for (const [t, count] of Object.entries(typeCounts).sort((a, b) => b[1] - a[1])) {
+    const color = TYPE_COLORS[t] || "#555";
+    const chip = document.createElement("span");
+    chip.className = "cw-type-chip";
+    chip.style.cssText = `color:${color};background:${color}22;border:1px solid ${color}55`;
+    chip.textContent = t + " " + count;
+    typesBar.appendChild(chip);
+  }
+  sec.appendChild(typesBar);
+
+  for (const p of partners) {
+    const rc = byId[partnerResult[p.Id]];
+
     const row = document.createElement("div");
     row.className = "cw-row";
     row.dataset.partners = p.Name.toLowerCase();
 
-    const thumb = miniThumb(p, "fi-thumb");
-    thumb.style.cssText = "width:32px;height:32px;flex-shrink:0";
-    row.appendChild(thumb);
+    // Partner
+    const pThumb = miniThumb(p, "fi-thumb");
+    pThumb.style.cssText = "width:32px;height:32px;flex-shrink:0";
+    row.appendChild(pThumb);
 
-    const info = document.createElement("div");
-    info.style.cssText = "flex:1;min-width:0";
+    const pInfo = document.createElement("div");
+    pInfo.style.cssText = "flex:1;min-width:0";
+    const pName = document.createElement("div");
+    pName.className = "mp-name";
+    pName.textContent = p.Name;
+    const pSub = document.createElement("div");
+    pSub.className = "mp-type";
+    pSub.textContent = (cardTypes[p.Type] || "") + (p.Type < 20 ? " \xb7 " + p.Attack : "");
+    pInfo.appendChild(pName);
+    pInfo.appendChild(pSub);
+    row.appendChild(pInfo);
 
-    const name = document.createElement("div");
-    name.className = "mp-name";
-    name.textContent = p.Name;
+    // Arrow + result
+    const arrow = document.createElement("span");
+    arrow.className = "cw-arrow";
+    arrow.textContent = "→";
+    row.appendChild(arrow);
 
-    const sub = document.createElement("div");
-    sub.className = "mp-type";
-    const typeName = cardTypes[p.Type] || "";
-    const isM = p.Type < 20;
-    sub.textContent = typeName + (isM ? " \xb7 " + p.Attack : "");
+    if (rc) {
+      const rThumb = miniThumb(rc, "fi-thumb");
+      rThumb.style.cssText = "width:32px;height:32px;flex-shrink:0";
+      row.appendChild(rThumb);
 
-    info.appendChild(name);
-    info.appendChild(sub);
-    row.appendChild(info);
+      const rInfo = document.createElement("div");
+      rInfo.className = "cw-result-info";
+      const rName = document.createElement("div");
+      rName.className = "cw-result-name";
+      rName.textContent = rc.Name;
+      const rAtk = document.createElement("div");
+      rAtk.className = "mp-type";
+      if (rc.Type < 20) rAtk.innerHTML = `<span style="color:${atkColor(rc.Attack)}">${rc.Attack}</span>`;
+      rInfo.appendChild(rName);
+      rInfo.appendChild(rAtk);
+      row.appendChild(rInfo);
+    }
 
     row.addEventListener("click", () => openModal(p.Id));
     sec.appendChild(row);
@@ -798,6 +848,7 @@ function initSearch() {
     buildGrid(q);
     if (!q) { closeDrop(); return; }
     dropFiltered = allNames.filter(n => n.name.toLowerCase().includes(q)).slice(0, 20);
+    if (dropFiltered.length === 1) { selectCard(dropFiltered[0].id); return; }
     renderDrop(dropFiltered);
   });
 
