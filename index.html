@@ -505,7 +505,8 @@ function hideTip() {
 
 // ── modal row tooltip ────────────────────────────────────
 const mTip = document.getElementById("m-tip");
-let mTipTimer = null, _expandT = null, _expandPartners = null;
+let mTipTimer = null, _expandT = null, _expandPartners = null, _expandRowId = null;
+const _expandedIds = new Set();
 
 function moveMTip(e) {
   const W = window.innerWidth, H = window.innerHeight;
@@ -521,6 +522,7 @@ function moveMTip(e) {
 function hideMTip() {
   clearTimeout(_expandT);
   _expandPartners = null;
+  _expandRowId = null;
   mTipTimer = setTimeout(() => { mTip.style.display = "none"; }, 60);
 }
 
@@ -556,10 +558,10 @@ function attrIcon(attrIdx, h) {
 
 function showMTipFusesInto(rc, partners, e) {
   clearTimeout(mTipTimer);
-  clearTimeout(_expandT);
-  _expandPartners = partners.length > 8 ? partners : null;
   const typeName = cardTypes[rc.Type] || "";
   const isM = rc.Type < 20;
+  const fullyLoaded = _expandedIds.has(rc.Id);
+  const shown = fullyLoaded ? partners : partners.slice(0, 8);
   mTip.innerHTML =
     `<div class="mt-header">${mCardImg(rc,80)}` +
     `<div class="mt-info">` +
@@ -567,14 +569,19 @@ function showMTipFusesInto(rc, partners, e) {
     (isM ? `<div class="mt-stats" style="color:${atkColor(rc.Attack)}">ATK ${rc.Attack} / DEF ${rc.Defense}</div>` : "") +
     `<div class="mt-type">${typeIcon(rc.Type, 13)}${escHtml(typeName)}</div></div></div>` +
     `<div class="mt-materials-box"><span class="mt-materials-label">Materials</span><div class="mt-partners-row">` +
-    partners.slice(0, 8).map(p =>
+    shown.map(p =>
       `<div class="mt-partner-card">${mCardImg(p, 44)}<div class="mt-partner-name">${escHtml(p.Name)}</div></div>`
     ).join("") +
-    (partners.length > 8 ? `<div class="mt-partner-more">+${partners.length - 8}</div>` : "") +
+    (!fullyLoaded && partners.length > 8 ? `<div class="mt-partner-more">+${partners.length - 8}</div>` : "") +
     `</div></div>`;
   mTip.style.display = "block";
   moveMTip(e);
-  if (_expandPartners) _expandT = setTimeout(_expandMTipMaterials, 700);
+  if (!fullyLoaded && _expandRowId !== rc.Id) {
+    clearTimeout(_expandT);
+    _expandRowId = rc.Id;
+    _expandPartners = partners.length > 8 ? partners : null;
+    if (_expandPartners) _expandT = setTimeout(_expandMTipMaterials, 700);
+  }
 }
 
 function _expandMTipMaterials() {
@@ -590,6 +597,7 @@ function _expandMTipMaterials() {
     _pf(thumbUrl(p)); _pf(fullUrl(p)); _pf(localUrl(p));
   });
   if (more) more.remove();
+  _expandedIds.add(_expandRowId);
   _expandPartners = null;
 }
 
