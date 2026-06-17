@@ -2,18 +2,18 @@
 
 import { useState } from 'react'
 import type { ResultEntry } from '@/lib/types'
-import { CardThumb } from '../CardThumb'
-import { CardLabel } from '../CardLabel'
 import { byId } from '@/lib/dataLoader'
-import { TYPE_NAMES, TYPE_COLORS, atkColor } from '@/lib/constants'
+import { TYPE_NAMES, TYPE_COLORS } from '@/lib/constants'
+import { CardSlot, TILE_W } from './CardSlot'
 
 interface Props {
+  selfId: number
   madeFrom: ResultEntry[]
   onSelect: (id: number) => void
   query?: string
 }
 
-export function MadeFromSection({ madeFrom, onSelect, query }: Props) {
+export function MadeFromSection({ selfId, madeFrom, onSelect, query }: Props) {
   const [typeFilter, setTypeFilter] = useState<number | null>(null)
 
   if (madeFrom.length === 0) return null
@@ -28,7 +28,6 @@ export function MadeFromSection({ madeFrom, onSelect, query }: Props) {
 
   if (queryFiltered.length === 0) return null
 
-  // Unique types across query-filtered materials
   const typeSet = new Set<number>()
   for (const { card1, card2 } of queryFiltered) {
     const c1 = byId[card1], c2 = byId[card2]
@@ -47,8 +46,9 @@ export function MadeFromSection({ madeFrom, onSelect, query }: Props) {
         ✦ Made From
         <span className="ml-2 text-[#333]">{queryFiltered.length}</span>
       </h3>
+
       {typeSet.size > 1 && (
-        <div className="flex flex-wrap gap-1 px-4 mb-2">
+        <div className="flex flex-wrap gap-1 px-4 mb-3">
           {[...typeSet].map(t => {
             const name = TYPE_NAMES[t] || ''
             const color = TYPE_COLORS[name] || '#555'
@@ -70,32 +70,23 @@ export function MadeFromSection({ madeFrom, onSelect, query }: Props) {
           })}
         </div>
       )}
-      <div className="space-y-0.5">
-        {filtered.map(({ card1, card2 }, idx) => {
-          const c1 = byId[card1], c2 = byId[card2]
-          if (!c1 || !c2) return null
-          return (
-            <div key={idx} className="flex items-center gap-2 px-4 py-1.5 hover:bg-[#0e0e1a]">
-              <CardThumb card={c1} size={52} onClick={() => onSelect(card1)} />
-              <span className="text-[#333] text-sm">+</span>
-              <CardThumb card={c2} size={52} onClick={() => onSelect(card2)} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-[#666] flex items-center gap-1 flex-wrap">
-                  <CardLabel card={c1} iconSize={11} className="hover:text-[#ccc]" onClick={() => onSelect(card1)} />
-                  <span className="text-[#333]">+</span>
-                  <CardLabel card={c2} iconSize={11} className="hover:text-[#ccc]" onClick={() => onSelect(card2)} />
-                </div>
-                <div className="text-[10px] text-[#444]">
-                  <span style={{ color: atkColor(c1.Attack) }}>{c1.Attack}</span>
-                  <span className="text-[#333]">/{c1.Defense}</span>
-                  <span className="text-[#333] mx-1">+</span>
-                  <span style={{ color: atkColor(c2.Attack) }}>{c2.Attack}</span>
-                  <span className="text-[#333]">/{c2.Defense}</span>
-                </div>
-              </div>
+
+      <div className="px-4" style={{ columns: `${TILE_W}px`, columnGap: 8 }}>
+        {filtered.map(({ card1, card2 }, idx) => (
+          <div
+            key={idx}
+            className="break-inside-avoid mb-2 bg-[#0d0d18] border border-[#1a1a28] rounded-sm hover:border-[#252535] transition-colors"
+            style={{ width: '100%' }}
+          >
+            <div className="flex items-center justify-between px-2 py-2" style={{ width: '100%' }}>
+              <CardSlot id={card1} onSelect={onSelect} />
+              <span className="text-[#2a2a3a] text-sm font-light shrink-0 select-none">+</span>
+              <CardSlot id={card2} onSelect={onSelect} />
+              <span className="text-[#2a2a3a] text-sm font-light shrink-0 select-none">=</span>
+              <CardSlot id={selfId} isResult onSelect={onSelect} />
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
     </div>
   )

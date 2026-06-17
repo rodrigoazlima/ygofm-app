@@ -170,7 +170,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: 
               onSelect={onSelect}
               query={query}
             />
-            <MadeFromSection madeFrom={relations.madeFrom} onSelect={onSelect} query={query} />
+            <MadeFromSection selfId={cardId} madeFrom={relations.madeFrom} onSelect={onSelect} query={query} />
             <DropsSection cardId={cardId} />
           </>
         )}
