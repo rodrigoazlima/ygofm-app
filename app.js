@@ -483,31 +483,50 @@ function applyPartnerFilter(q) {
 }
 
 function updateIncompatiblePanel(lq, sectionMatches) {
-  if (!lq || sectionMatches > 0) {
+  if (!lq) {
     mIncompatiblePanel.classList.remove("active");
     mIncompatiblePanel.innerHTML = "";
     modalEl.classList.remove("has-panel");
     return;
   }
 
-  // Build set of valid partner IDs for current modal card
+  // Build set of all related card IDs (visible in any section)
   const partnerIds = new Set();
   if (modalCardId !== null) {
     if (fusionsList[modalCardId]) {
-      for (const fu of fusionsList[modalCardId]) partnerIds.add(fu.card);
+      for (const fu of fusionsList[modalCardId]) {
+        partnerIds.add(fu.card);   // fusion partner (material 2)
+        partnerIds.add(fu.result); // fusion result
+      }
     }
     if (mat2Idx[modalCardId]) {
-      for (const [mat1Id] of mat2Idx[modalCardId]) partnerIds.add(mat1Id);
+      for (const [mat1Id, resId] of mat2Idx[modalCardId]) {
+        partnerIds.add(mat1Id); // fusion partner (material 1)
+        partnerIds.add(resId);  // fusion result
+      }
     }
-    partnerIds.add(modalCardId); // exclude self
+    const pairs = resultsList[modalCardId] || [];
+    for (const pair of pairs) {
+      partnerIds.add(pair.card1);
+      partnerIds.add(pair.card2);
+    }
+    for (const eid of (monster2Equips[modalCardId] || [])) partnerIds.add(eid);
+    partnerIds.add(modalCardId);
   }
 
-  // Cards matching query that are NOT fusion partners
+  // Cards matching query that are NOT related to current card
   const incompatible = card_db.filter(c => {
     if (partnerIds.has(c.Id)) return false;
     const typeName = (cardTypes[c.Type] || "").toLowerCase();
     return c.Name.toLowerCase().includes(lq) || typeName.includes(lq);
   }).sort((a, b) => (b.Attack || 0) - (a.Attack || 0)).slice(0, 50);
+
+  if (!incompatible.length) {
+    mIncompatiblePanel.classList.remove("active");
+    mIncompatiblePanel.innerHTML = "";
+    modalEl.classList.remove("has-panel");
+    return;
+  }
 
   mIncompatiblePanel.innerHTML = "";
 
