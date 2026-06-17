@@ -1,6 +1,8 @@
-# Yugioh Search
+# Yu-Gi-Oh! Forbidden Memories Search
 
 Card reference tool for **Yu-Gi-Oh! Forbidden Memories** (PS1). Search cards, inspect stats, and explore fusion relationships.
+
+[https://rodrigoazlima.github.io/ygofm-app/](https://rodrigoazlima.github.io/ygofm-app/)
 
 ## Features
 

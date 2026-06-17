@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Yugioh Search',
+  title: 'Yu-Gi-Oh! Forbidden Memories > Search',
   description: 'Yu-Gi-Oh Forbidden Memories card search',
 }
 
