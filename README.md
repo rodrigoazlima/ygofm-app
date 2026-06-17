@@ -1,55 +1,36 @@
-# YGOFM Fusion Chart
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Interactive fusion reference for **Yu-Gi-Oh! Forbidden Memories**.
+## Getting Started
 
-**Live:** https://rodrigoazlima.github.io/ygofm-app/
+First, run the development server:
 
-## Features
-
-- 204 fusion result cards grouped by monster type, sorted by ATK descending
-- Hover tooltip with full card art and ATK/DEF stats
-- Search all 722 cards by name with keyboard-navigable autocomplete
-- Click any card to open a detail modal with two sections:
-  - **Fuses Into** — all fusion results this card can produce as a material, grouped by result and sorted by ATK
-  - **Made From** — all material pairs that produce this card
-- Chain-navigate: click any result or material in the modal to open its own modal
-- Filter bar to narrow the result grid by card name or type
-
-## Codebase
-
-Pure HTML/JS, no build step. Single `index.html` with all styles and logic inline.
-
-```
-index.html            — full app (styles + logic, ~680 lines)
-data/
-  cards.js            — 722 cards (card_db array via TAFFY shim)
-  fusions.js          — 50 262 fusion rules (fusionsList[mat1Id] → [{card, result}])
-  results.js          — 25 131 material pairs (resultsList[resultId] → [{card1, card2}])
-  types_and_stars.js  — type names (cardTypes[typeId]) and guardian star names
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-### Key globals
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-| Variable | Shape | Purpose |
-|---|---|---|
-| `card_db` | `Card[]` | All 722 cards with Id, Name, Type, Attack, Defense, Attribute, CardCode |
-| `fusionsList` | `Array[722]` | Index by card1 Id → fusions where that card is material 1 |
-| `resultsList` | `Array[722]` | Index by result Id → all material pairs that produce it |
-| `cardTypes` | `string[]` | Maps Type integer → type name string |
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-### Runtime indices (built on load)
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-- `byId` — `{[id]: Card}` for O(1) card lookup
-- `mat2Idx` — `{[cardId]: [mat1Id, resultId][]}` — fusions where card is material 2
-- `fusionResultIds` — `Set<number>` of all cards that are fusion outputs (drives the grid)
+## Learn More
 
-## Deploy
+To learn more about Next.js, take a look at the following resources:
 
-GitHub Pages — branch deploy from `master` root. `.nojekyll` present, no Jekyll processing.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-To enable: repo Settings → Pages → Source: Deploy from a branch → `master` / `/ (root)`.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Data Sources
+## Deploy on Vercel
 
-Card data from [YGO-FM-FusionCalc](https://github.com/Solumin/YGO-FM-FusionCalc) (MIT).  
-Card images from [ygoprodeck.com](https://ygoprodeck.com).
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
