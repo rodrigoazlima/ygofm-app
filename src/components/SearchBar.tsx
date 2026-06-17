@@ -6,7 +6,7 @@ import type { NpcInfo } from '@/lib/dropsLoader'
 import { CardThumb } from './CardThumb'
 import { CardLabel } from './CardLabel'
 import { NpcImage } from './NpcImage'
-import { atkColor, TYPE_NAMES, TYPE_IMAGES, TYPE_COLORS } from '@/lib/constants'
+import { atkColor, TYPE_IMAGES, TYPE_COLORS, ATTR_IMAGES, ATTR_COLORS } from '@/lib/constants'
 
 export type SearchItem =
   | { kind: 'card'; card: Card }
@@ -18,22 +18,30 @@ export interface TypeSearchItem {
   count: number
 }
 
+export interface AttrSearchItem {
+  attrIdx: number
+  name: string
+  count: number
+}
+
 interface Props {
   query: string
   onChange: (q: string) => void
   onSelect: (id: number) => void
   onSelectNpc?: (id: number) => void
   onSelectType?: (typeIdx: number) => void
+  onSelectAttr?: (attrIdx: number) => void
   onClear?: () => void
   hasSelection?: boolean
   items: Card[]
   npcItems?: NpcInfo[]
   typeItems?: TypeSearchItem[]
+  attrItems?: AttrSearchItem[]
 }
 
 export function SearchBar({
-  query, onChange, onSelect, onSelectNpc, onSelectType,
-  onClear, hasSelection, items, npcItems = [], typeItems = [],
+  query, onChange, onSelect, onSelectNpc, onSelectType, onSelectAttr,
+  onClear, hasSelection, items, npcItems = [], typeItems = [], attrItems = [],
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -44,13 +52,13 @@ export function SearchBar({
     ...items.map(card => ({ kind: 'card' as const, card })),
     ...npcItems.map(npc => ({ kind: 'npc' as const, npc })),
   ]
-  const totalItems = mainItems.length + typeItems.length
+  const totalItems = mainItems.length + typeItems.length + attrItems.length
 
   useEffect(() => {
     setActiveIdx(-1)
     setOpen(totalItems > 0 && query.length > 0)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, npcItems, typeItems, query])
+  }, [items, npcItems, typeItems, attrItems, query])
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -77,13 +85,22 @@ export function SearchBar({
     setActiveIdx(-1)
   }, [onSelectType])
 
-  // Unified index: 0..mainItems.length-1 = main, mainItems.length..totalItems-1 = types
+  const selectAttr = useCallback((attrIdx: number) => {
+    onSelectAttr?.(attrIdx)
+    setOpen(false)
+    setActiveIdx(-1)
+  }, [onSelectAttr])
+
+  // Unified index: main → types → attrs
   const activateIdx = (idx: number) => {
     if (idx < mainItems.length) {
       selectMain(mainItems[idx])
-    } else {
+    } else if (idx < mainItems.length + typeItems.length) {
       const typeItem = typeItems[idx - mainItems.length]
       if (typeItem) selectType(typeItem.typeIdx)
+    } else {
+      const attrItem = attrItems[idx - mainItems.length - typeItems.length]
+      if (attrItem) selectAttr(attrItem.attrIdx)
     }
   }
 
@@ -218,6 +235,36 @@ export function SearchBar({
                       )}
                       <span className="flex-1 text-xs truncate" style={{ color }}>{t.name}</span>
                       <span className="text-[9px] text-[#333] shrink-0">{t.count}</span>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Attribute separator + items */}
+            {attrItems.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 px-3 pt-2 pb-1 border-t border-[#1e1e30]">
+                  <span className="text-[9px] uppercase tracking-widest text-[#333]">Elements</span>
+                </div>
+                {attrItems.map((a, i) => {
+                  const globalIdx = mainItems.length + typeItems.length + i
+                  const active = globalIdx === activeIdx
+                  const img = ATTR_IMAGES[a.attrIdx]
+                  const color = ATTR_COLORS[a.name] || '#666'
+                  return (
+                    <div
+                      key={`attr-${a.attrIdx}`}
+                      onMouseDown={() => selectAttr(a.attrIdx)}
+                      className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
+                    >
+                      {img && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt={a.name} width={18} height={18}
+                          style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
+                      )}
+                      <span className="flex-1 text-xs truncate" style={{ color }}>{a.name}</span>
+                      <span className="text-[9px] text-[#333] shrink-0">{a.count}</span>
                     </div>
                   )
                 })}

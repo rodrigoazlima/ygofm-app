@@ -3,7 +3,7 @@
 import { memo, useState } from 'react'
 import type { Card } from '@/lib/types'
 import { byId } from '@/lib/dataLoader'
-import { TYPE_NAMES, ATTR_NAMES, STAR_NAMES, TYPE_COLORS, TYPE_IMAGES, ATTR_IMAGES, FIELD_BOOSTS, atkColor } from '@/lib/constants'
+import { TYPE_NAMES, ATTR_NAMES, STAR_NAMES, TYPE_COLORS, TYPE_IMAGES, ATTR_IMAGES, ATTR_COLORS, FIELD_BOOSTS, atkColor } from '@/lib/constants'
 import { fullSources } from '@/lib/imageHelpers'
 import { useCardRelations } from '@/hooks/useCardRelations'
 import { FusesIntoSection } from './sections/FusesIntoSection'
@@ -17,6 +17,7 @@ interface Props {
   onSelect: (id: number) => void
   onSelectNpc?: (npcId: number) => void
   onSelectType?: (typeIdx: number) => void
+  onSelectAttr?: (attrIdx: number) => void
   query?: string
 }
 
@@ -40,7 +41,7 @@ function CardImage({ card }: { card: Card }) {
   )
 }
 
-export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, onSelectType, query }: Props) {
+export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, onSelectType, onSelectAttr, query }: Props) {
   const card = byId[cardId]
   const relations = useCardRelations(cardId)
 
@@ -99,34 +100,44 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
       <div className="flex gap-4 p-4 items-start">
         <CardImage card={card} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {TYPE_IMAGES[card.Type] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={TYPE_IMAGES[card.Type]} alt={typeName} title={typeName} width={18} height={18} style={{ width: 18, height: 18, objectFit: 'contain' }} />
-            )}
-            <h2 className="text-lg font-bold text-[#f0e8c0] leading-tight">{card.Name}</h2>
-            {card.Attribute != null && ATTR_IMAGES[card.Attribute] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={ATTR_IMAGES[card.Attribute]} alt={attrName} title={attrName} width={18} height={18} style={{ width: 18, height: 18, objectFit: 'contain' }} />
-            )}
-          </div>
+          <h2 className="text-lg font-bold text-[#f0e8c0] leading-tight mb-2">{card.Name}</h2>
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span
               onClick={() => onSelectType?.(card.Type)}
-              className="text-[10px] px-1.5 py-0.5 rounded-sm border transition-opacity"
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm border transition-opacity"
               style={{
                 borderColor: typeColor,
                 color: typeColor,
                 cursor: onSelectType ? 'pointer' : undefined,
-                opacity: onSelectType ? undefined : 1,
               }}
               title={onSelectType ? `View all ${typeName}` : undefined}
             >
+              {TYPE_IMAGES[card.Type] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={TYPE_IMAGES[card.Type]} alt={typeName} width={11} height={11}
+                  style={{ width: 11, height: 11, objectFit: 'contain' }} />
+              )}
               {typeName}
             </span>
             {attrName && (
-              <span className="text-[10px] text-[#555]">{attrName}</span>
+              <span
+                onClick={() => onSelectAttr?.(card.Attribute)}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm border transition-opacity"
+                style={{
+                  borderColor: ATTR_COLORS[attrName] ?? '#555',
+                  color: ATTR_COLORS[attrName] ?? '#555',
+                  cursor: onSelectAttr ? 'pointer' : undefined,
+                }}
+                title={onSelectAttr ? `View all ${attrName}` : undefined}
+              >
+                {ATTR_IMAGES[card.Attribute] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ATTR_IMAGES[card.Attribute]} alt={attrName} width={11} height={11}
+                    style={{ width: 11, height: 11, objectFit: 'contain' }} />
+                )}
+                {attrName}
+              </span>
             )}
           </div>
 

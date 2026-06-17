@@ -19,6 +19,11 @@ export const STAR_NAMES = [
 
 export const ATTR_NAMES = ['Dark', 'Earth', 'Fire', 'Light', 'Water', 'Wind', 'Divine']
 
+export const ATTR_COLORS: Record<string, string> = {
+  Dark: '#9944cc', Earth: '#aa7733', Fire: '#dd4422',
+  Light: '#ccbb22', Water: '#3388dd', Wind: '#44aa55', Divine: '#ddaa33',
+}
+
 export const TYPE_IMAGES = [
   'https://ms.yugipedia.com//c/c7/Dragon.png',
   'https://ms.yugipedia.com//2/2f/Spellcaster.png',
