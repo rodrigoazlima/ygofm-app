@@ -96,6 +96,13 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 #m-info{flex:1;min-width:0}
 #m-name{font-size:16px;font-weight:bold;color:#eee;margin-bottom:4px}
 #m-stats{font-size:11px;color:#888;line-height:1.6}
+#m-level{font-size:11px;color:#d4a020;letter-spacing:1px;margin-top:3px}
+#m-guardian{font-size:10px;color:#7788aa;margin-top:2px}
+#m-desc{
+  font-size:10px;color:#666;line-height:1.55;font-style:italic;
+  margin-top:6px;padding-top:5px;border-top:1px solid #1a1a2a;
+  max-height:90px;overflow-y:auto;white-space:pre-wrap;
+}
 #m-close{
   flex-shrink:0;background:none;border:none;color:#555;
   font-size:18px;cursor:pointer;padding:2px 6px;
@@ -112,6 +119,15 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 #m-filter:focus{border-color:#4444aa}
 #m-filter::placeholder{color:#444}
 .fi-group.faded,.mf-row.faded,.cw-row.faded{opacity:.15;pointer-events:none;order:1}
+.fi-group.fi-incompat{opacity:.15;pointer-events:none;order:2}
+.fi-incompat-sep,.eq-incompat-sep{
+  order:1;display:none;
+  font-size:9px;letter-spacing:.5px;color:#443;
+  padding:5px 0 2px;margin-top:4px;
+  border-top:1px solid #1a1a2a;
+}
+.fi-incompat-sep.visible,.eq-incompat-sep.visible{display:block}
+.eq-row.eq-incompat{opacity:.15;pointer-events:none;order:2}
 
 /* modal body sections */
 .m-section{padding:10px 12px;border-bottom:1px solid #1a1a2a;display:flex;flex-direction:column}
@@ -151,6 +167,16 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
 }
 .m-section-title.orange{color:#aa7733}
 .m-section-title.teal{color:#3a9a88}
+.m-section-title.gold{color:#7a6a44}
+
+/* equips-with rows */
+.eq-row{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 0;border-bottom:1px solid #14141e;cursor:pointer;
+}
+.eq-row:hover{background:#0e0e18}
+.cw-type-chip{cursor:pointer;transition:opacity .15s}
+.cw-type-chip.dimmed{opacity:.25}
 
 /* combines-with rows */
 .cw-row{
@@ -270,6 +296,9 @@ body{background:#0c0c10;color:#ccc;font-family:monospace;font-size:12px}
       <div id="m-info">
         <div id="m-name"></div>
         <div id="m-stats"></div>
+        <div id="m-level"></div>
+        <div id="m-guardian"></div>
+        <div id="m-desc"></div>
       </div>
       <button id="m-close" title="Close">&#10005;</button>
     </div>
@@ -316,10 +345,28 @@ function atkColor(atk) {
 }
 
 // ── indices ──────────────────────────────────────────────
-let byId = {}, mat2Idx = {}, fusionResultIds = new Set();
+let byId = {}, mat2Idx = {}, fusionResultIds = new Set(), monster2Equips = {};
+
+// Field card ID → monster type indices boosted (YGOFM game mechanics)
+const FIELD_BOOSTS = {
+  330: [5, 4, 9, 19],   // Forest:    Beast, Beast-Warrior, Insect, Plant
+  331: [2, 18, 10],     // Wasteland: Zombie, Rock, Dinosaur
+  332: [0, 6, 15],      // Mountain:  Dragon, Winged Beast, Thunder
+  333: [3, 4],          // Sogen:     Warrior, Beast-Warrior
+  334: [16, 13, 12],    // Umi:       Aqua, Sea Serpent, Fish
+  335: [7, 1],          // Yami:      Fiend, Spellcaster
+};
 
 function buildIndices() {
-  for (const c of card_db) byId[c.Id] = c;
+  for (const c of card_db) {
+    byId[c.Id] = c;
+    if (c.Equip && c.Equip.length) {
+      for (const mid of c.Equip) {
+        if (!monster2Equips[mid]) monster2Equips[mid] = [];
+        monster2Equips[mid].push(c.Id);
+      }
+    }
+  }
 
   for (let i = 1; i < fusionsList.length; i++) {
     if (!fusionsList[i]) continue;
@@ -505,7 +552,7 @@ function hideTip() {
 
 // ── modal row tooltip ────────────────────────────────────
 const mTip = document.getElementById("m-tip");
-let mTipTimer = null, _expandT = null, _expandPartners = null, _expandRowId = null;
+let mTipTimer = null, _expandT = null, _expandPartners = null, _expandRowId = null, _cwTypeFilter = null;
 const _expandedIds = new Set();
 
 function moveMTip(e) {
@@ -621,6 +668,21 @@ function showMTipCombinesWith(partner, result, e) {
   moveMTip(e);
 }
 
+function showMTipEquip(card, e) {
+  clearTimeout(mTipTimer);
+  const typeName = cardTypes[card.Type] || "";
+  const desc = (card.Description || "").replace(/\r\n|\r/g, " ").replace(/\s+/g, " ").trim();
+  mTip.innerHTML =
+    `<div class="mt-header">${mCardImg(card, 80)}` +
+    `<div class="mt-info">` +
+    `<div class="mt-name">${escHtml(card.Name)}</div>` +
+    `<div class="mt-type" style="margin-top:3px">${typeIcon(card.Type, 13)}${escHtml(typeName)}</div>` +
+    (desc ? `<div style="margin-top:5px;font-size:10px;color:#99aacc;line-height:1.55;font-style:italic">${escHtml(desc)}</div>` : "") +
+    `</div></div>`;
+  mTip.style.display = "block";
+  moveMTip(e);
+}
+
 function showMTipMadeFrom(m1, m2, result, e) {
   clearTimeout(mTipTimer);
   mTip.innerHTML =
@@ -654,25 +716,69 @@ function closeModal() {
   overlay.classList.remove("open");
   mFilter.value = "";
   modalCardId = null;
+  _cwTypeFilter = null;
   applyPartnerFilter("");
 }
 
 function applyPartnerFilter(q) {
   const lq = q.toLowerCase().trim();
-  for (const row of mBody.querySelectorAll(".fi-group")) {
-    row.classList.toggle("faded", !!lq && !(row.dataset.partners||"").includes(lq));
+  let totalMatches = 0;
+
+  // fi-groups: matching stay, non-matching sink below separator
+  const fiGroups = [...mBody.querySelectorAll(".fi-group")];
+  if (fiGroups.length > 0) {
+    const fiSection = fiGroups[0].closest(".m-section");
+    let sep = fiSection.querySelector(".fi-incompat-sep");
+    if (!sep) {
+      sep = document.createElement("div");
+      sep.className = "fi-incompat-sep";
+      fiSection.appendChild(sep);
+    }
+    let incompCount = 0;
+    for (const row of fiGroups) {
+      const matches = !lq || (row.dataset.partners||"").includes(lq);
+      row.classList.toggle("fi-incompat", !matches);
+      if (!matches) incompCount++; else totalMatches++;
+    }
+    sep.classList.toggle("visible", !!lq && incompCount > 0);
+    if (lq && incompCount > 0) sep.textContent = `INCOMPATIBLE (${incompCount})`;
+  }
+  // eq-rows: same sink-to-bottom behavior as fi-groups
+  const eqRows = [...mBody.querySelectorAll(".eq-row")];
+  if (eqRows.length > 0) {
+    const eqSection = eqRows[0].closest(".m-section");
+    let eqSep = eqSection.querySelector(".eq-incompat-sep");
+    if (!eqSep) {
+      eqSep = document.createElement("div");
+      eqSep.className = "eq-incompat-sep";
+      eqSection.appendChild(eqSep);
+    }
+    let eqIncompat = 0;
+    for (const row of eqRows) {
+      const matches = !lq || (row.dataset.name||"").includes(lq);
+      row.classList.toggle("eq-incompat", !matches);
+      if (!matches) eqIncompat++; else totalMatches++;
+    }
+    eqSep.classList.toggle("visible", !!lq && eqIncompat > 0);
+    if (lq && eqIncompat > 0) eqSep.textContent = `INCOMPATIBLE (${eqIncompat})`;
   }
   for (const row of mBody.querySelectorAll(".cw-row")) {
-    row.classList.toggle("faded", !!lq && !(row.dataset.partners||"").includes(lq));
+    const textOk = !lq || (row.dataset.partners||"").includes(lq);
+    const typeOk = _cwTypeFilter === null || Number(row.dataset.typeIdx) === _cwTypeFilter;
+    const visible = textOk && typeOk;
+    row.classList.toggle("faded", !visible);
+    if (visible) totalMatches++;
   }
   for (const row of mBody.querySelectorAll(".mf-row")) {
-    row.classList.toggle("faded", !!lq && !(row.dataset.materials||"").includes(lq));
+    const matches = !lq || (row.dataset.materials||"").includes(lq);
+    row.classList.toggle("faded", !matches);
+    if (matches) totalMatches++;
   }
-  updateIncompatiblePanel(lq);
+  updateIncompatiblePanel(lq, totalMatches);
 }
 
-function updateIncompatiblePanel(lq) {
-  if (!lq) {
+function updateIncompatiblePanel(lq, sectionMatches) {
+  if (!lq || sectionMatches > 0) {
     mIncompatiblePanel.classList.remove("active");
     mIncompatiblePanel.innerHTML = "";
     modalEl.classList.remove("has-panel");
@@ -768,6 +874,7 @@ function openModal(cardId) {
 
   mFilter.value = "";
   modalCardId = cardId;
+  _cwTypeFilter = null;
   updateIncompatiblePanel("");
 
   // header
@@ -787,8 +894,30 @@ function openModal(cardId) {
     (isM ? `ATK <b style="color:${atkColor(c.Attack)}">${c.Attack}</b> &nbsp; DEF ${c.Defense}<br>` : "") +
     typeIcon(c.Type, 15) + escHtml(t) + (c.Attribute != null ? ` &middot; ${attrIcon(c.Attribute, 15)}${escHtml(attrNames[c.Attribute]||"")}` : "");
 
+  const mLevelEl = document.getElementById("m-level");
+  if (isM && c.Level) {
+    mLevelEl.innerHTML = `<span style="color:#555;font-size:9px;letter-spacing:.5px">LV</span> ${"★".repeat(c.Level)}`;
+  } else {
+    mLevelEl.textContent = "";
+  }
+
+  const mGuardianEl = document.getElementById("m-guardian");
+  if (isM && c.GuardianStarA != null && c.GuardianStarB != null) {
+    mGuardianEl.innerHTML =
+      `<span style="color:#445;font-size:9px">GUARDIAN</span> ` +
+      `<span style="color:#9ab">${escHtml(starNames[c.GuardianStarA]||"")}</span>` +
+      ` <span style="color:#334">/</span> ` +
+      `<span style="color:#9ab">${escHtml(starNames[c.GuardianStarB]||"")}</span>`;
+  } else {
+    mGuardianEl.textContent = "";
+  }
+
+  const desc = (c.Description || "").replace(/\r\n|\r/g, "\n").replace(/[ \t]+/g, " ").trim();
+  document.getElementById("m-desc").textContent = desc;
+
   mBody.innerHTML = "";
   mBody.appendChild(makeFusesIntoSection(c));
+  mBody.appendChild(makeEquipsWithSection(c));
   mBody.appendChild(makeCombinesWithSection(c));
   mBody.appendChild(makeMadeFromSection(c));
 
@@ -840,7 +969,7 @@ function makeFusesIntoSection(c) {
 
     const row = document.createElement("div");
     row.className = "fi-group";
-    row.dataset.partners = partners.map(p => p.Name.toLowerCase()).join("|");
+    row.dataset.partners = [rc.Name, ...partners.map(p => p.Name)].map(n => n.toLowerCase()).join("|");
     row.dataset.partnerIds = partners.map(p => p.Id).join("|");
     row.dataset.cardId = resId;
 
@@ -909,7 +1038,8 @@ function makeCombinesWithSection(c) {
   }
 
   const partners = Object.keys(partnerResult).map(id => byId[Number(id)]).filter(Boolean);
-  partners.sort((a, b) => (b.Attack || 0) - (a.Attack || 0));
+  partners.sort((a, b) =>
+    (byId[partnerResult[b.Id]]?.Attack || 0) - (byId[partnerResult[a.Id]]?.Attack || 0));
 
   const title = document.createElement("div");
   title.className = "m-section-title teal";
@@ -924,7 +1054,7 @@ function makeCombinesWithSection(c) {
     return sec;
   }
 
-  // Type compatibility chips
+  // Type compatibility chips — click to filter rows by type
   const typeCounts = {};
   for (const p of partners) {
     typeCounts[p.Type] = (typeCounts[p.Type] || 0) + 1;
@@ -936,8 +1066,17 @@ function makeCombinesWithSection(c) {
     const color = TYPE_COLORS[t] || "#555";
     const chip = document.createElement("span");
     chip.className = "cw-type-chip";
+    chip.dataset.typeIdx = tidx;
     chip.style.cssText = `color:${color};background:${color}22;border:1px solid ${color}55`;
     chip.innerHTML = typeIcon(Number(tidx), 13) + escHtml(t) + " " + count;
+    chip.addEventListener("click", () => {
+      const ti = Number(tidx);
+      _cwTypeFilter = (_cwTypeFilter === ti) ? null : ti;
+      for (const ch of typesBar.querySelectorAll(".cw-type-chip")) {
+        ch.classList.toggle("dimmed", _cwTypeFilter !== null && Number(ch.dataset.typeIdx) !== _cwTypeFilter);
+      }
+      applyPartnerFilter(mFilter.value.trim());
+    });
     typesBar.appendChild(chip);
   }
   sec.appendChild(typesBar);
@@ -949,6 +1088,7 @@ function makeCombinesWithSection(c) {
     row.className = "cw-row";
     row.dataset.partners = p.Name.toLowerCase();
     row.dataset.cardId = p.Id;
+    row.dataset.typeIdx = p.Type;
 
     // Partner
     const pThumb = miniThumb(p, "fi-thumb");
@@ -995,6 +1135,74 @@ function makeCombinesWithSection(c) {
     row.addEventListener("mousemove",  moveMTip);
     row.addEventListener("mouseleave", hideMTip);
     row.addEventListener("click", () => openModal(p.Id));
+    sec.appendChild(row);
+  }
+
+  return sec;
+}
+
+// "Equips With": equip spells compatible with this monster, or monsters this equip targets
+function makeEquipsWithSection(c) {
+  const sec = document.createElement("div");
+  sec.className = "m-section";
+
+  const isEquip = c.Type === 23;
+  let cards = [];
+  if (isEquip) {
+    cards = (c.Equip || []).map(id => byId[id]).filter(Boolean);
+    cards.sort((a, b) => (b.Attack || 0) - (a.Attack || 0));
+  } else {
+    const equipCards = (monster2Equips[c.Id] || []).map(id => byId[id]).filter(Boolean);
+    const fieldCards = Object.entries(FIELD_BOOSTS)
+      .filter(([, types]) => types.includes(c.Type))
+      .map(([id]) => byId[Number(id)])
+      .filter(Boolean);
+    cards = [...equipCards, ...fieldCards];
+    cards.sort((a, b) => (a.Name || "").localeCompare(b.Name || ""));
+  }
+
+  const title = document.createElement("div");
+  title.className = "m-section-title gold";
+  title.textContent = isEquip
+    ? `⚙ EQUIPS ONTO (${cards.length} monsters)`
+    : `✦ COMPATIBLE SPELLS (${cards.length})`;
+  sec.appendChild(title);
+
+  if (cards.length === 0) {
+    const em = document.createElement("div");
+    em.className = "empty-msg";
+    em.textContent = isEquip ? "No target monsters." : "No compatible spells.";
+    sec.appendChild(em);
+    return sec;
+  }
+
+  for (const card of cards) {
+    const row = document.createElement("div");
+    row.className = "eq-row";
+    row.dataset.name = card.Name.toLowerCase();
+
+    const thumb = miniThumb(card, "fi-thumb");
+    thumb.style.cssText = "width:42px;height:42px;flex-shrink:0";
+    row.appendChild(thumb);
+
+    const info = document.createElement("div");
+    info.style.cssText = "flex:1;min-width:0";
+    const name = document.createElement("div");
+    name.className = "mp-name";
+    name.textContent = card.Name;
+    const sub = document.createElement("div");
+    sub.className = "mp-type";
+    const isM = card.Type < 20;
+    sub.innerHTML = typeIcon(card.Type, 12) + escHtml(cardTypes[card.Type] || "") + (isM ? " · " + card.Attack : "");
+    info.appendChild(name);
+    info.appendChild(sub);
+    row.appendChild(info);
+
+    row.addEventListener("click", () => openModal(card.Id));
+    row.addEventListener("mouseenter", e => card.Type >= 20 ? showMTipEquip(card, e) : showMTipCombinesWith(card, null, e));
+    row.addEventListener("mousemove", moveMTip);
+    row.addEventListener("mouseleave", hideMTip);
+
     sec.appendChild(row);
   }
 

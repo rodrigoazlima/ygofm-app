@@ -105,6 +105,7 @@ var fandomImages = {
   "613": "https://static.wikia.nocookie.net/yugioh/images/1/1d/TwinHeadedThunderDragon-FMR-EN-VG.png/revision/latest?cb=20071216034125",
   "627": "https://static.wikia.nocookie.net/yugioh/images/a/ac/Nekogal2-FMR-EN-VG.png/revision/latest?cb=20131222224352",
   "633": "https://static.wikia.nocookie.net/yugioh/images/f/f6/WingedEggofNewLife-FMR-EN-VG.png/revision/latest?cb=20131222224357",
+  "635": "https://static.wikia.nocookie.net/yugioh/images/a/a5/QueensDouble-PMT-PT-SP-1E.png/revision/latest?cb=20171229191122",
   "638": "https://static.wikia.nocookie.net/yugioh/images/9/92/QueenofAutumnLeaves-FMR-EN-VG.png/revision/latest?cb=20131222224353",
   "639": "https://static.wikia.nocookie.net/yugioh/images/7/76/AmphibiousBugroth-FMR-EN-VG.png/revision/latest?cb=20131222224120",
   "641": "https://static.wikia.nocookie.net/yugioh/images/9/92/InvaderoftheThrone-FMR-EN-VG.png/revision/latest?cb=20131222224349",
