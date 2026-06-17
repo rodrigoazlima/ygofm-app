@@ -8,9 +8,9 @@ module.exports = defineConfig({
     headless: true,
   },
   webServer: {
-    command: "npx serve . --listen 5500 --no-clipboard",
+    command: "npx serve .. --listen 5500 --no-clipboard",
     url: "http://localhost:5500",
-    reuseExistingServer: false,
-    timeout: 10000,
+    reuseExistingServer: true,
+    timeout: 30000,
   },
 });
