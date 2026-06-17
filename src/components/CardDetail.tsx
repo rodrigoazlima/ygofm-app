@@ -3,7 +3,7 @@
 import { memo, useState } from 'react'
 import type { Card } from '@/lib/types'
 import { byId } from '@/lib/dataLoader'
-import { TYPE_NAMES, ATTR_NAMES, STAR_NAMES, TYPE_COLORS, TYPE_IMAGES, ATTR_IMAGES, atkColor } from '@/lib/constants'
+import { TYPE_NAMES, ATTR_NAMES, STAR_NAMES, TYPE_COLORS, TYPE_IMAGES, ATTR_IMAGES, FIELD_BOOSTS, atkColor } from '@/lib/constants'
 import { fullSources } from '@/lib/imageHelpers'
 import { useCardRelations } from '@/hooks/useCardRelations'
 import { FusesIntoSection } from './sections/FusesIntoSection'
@@ -48,6 +48,31 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: 
   const attrName = ATTR_NAMES[card.Attribute] ?? ''
   const isMonster = card.Type < 20
   const isEquip = card.Type === 23
+
+  // FMR effect summary for equip and field cards
+  const effectLine = (() => {
+    if (isEquip && card.Equip?.length) {
+      const typeCounts: Record<number, number> = {}
+      for (const id of card.Equip) {
+        const t = byId[id]?.Type
+        if (t != null && t < 20) typeCounts[t] = (typeCounts[t] || 0) + 1
+      }
+      const types = Object.entries(typeCounts)
+        .sort(([, a], [, b]) => b - a)
+        .map(([t]) => TYPE_NAMES[Number(t)])
+        .filter(Boolean)
+      const boost = card.Stars === 50000 ? '+1000 ATK/DEF (any type)'
+        : card.Stars === 999999 ? 'Special effect'
+        : `+500 ATK/DEF → ${types.join(', ')}`
+      return boost
+    }
+    const fieldTypes = FIELD_BOOSTS[card.Id]
+    if (fieldTypes) {
+      const names = fieldTypes.map(i => TYPE_NAMES[i]).filter(Boolean)
+      return `+200 ATK/DEF → ${names.join(', ')}`
+    }
+    return null
+  })()
 
   const q = query?.toLowerCase() ?? ''
   const noSectionMatch = q !== '' && (() => {
@@ -115,9 +140,14 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: 
             </>
           )}
 
-          <p className="text-[9px] text-[#666] leading-relaxed whitespace-pre-line mt-2">
+          <p className="text-[9px] text-[#666] leading-relaxed mt-2">
             {card.Description.replace(/\r\n/g, '\n')}
           </p>
+          {effectLine && (
+            <p className="text-[9px] text-[#a0c4ff] mt-1 font-mono">
+              {effectLine}
+            </p>
+          )}
         </div>
       </div>
 
