@@ -10,6 +10,7 @@ import { FusesIntoSection } from './sections/FusesIntoSection'
 import { CombinesWithSection } from './sections/CombinesWithSection'
 import { CompatibleSpellsSection } from './sections/CompatibleSpellsSection'
 import { MadeFromSection } from './sections/MadeFromSection'
+import { DropsSection } from './sections/DropsSection'
 
 interface Props {
   cardId: number
@@ -170,6 +171,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: 
               query={query}
             />
             <MadeFromSection madeFrom={relations.madeFrom} onSelect={onSelect} query={query} />
+            <DropsSection cardId={cardId} />
           </>
         )}
       </div>
