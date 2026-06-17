@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import { CardThumb } from '../CardThumb'
-import { CardLabel } from '../CardLabel'
 import { byId } from '@/lib/dataLoader'
-import { TYPE_NAMES, TYPE_COLORS, atkColor } from '@/lib/constants'
+import { TYPE_NAMES, TYPE_COLORS, TYPE_IMAGES, atkColor } from '@/lib/constants'
 
 interface Props {
   selfId: number
@@ -12,12 +11,62 @@ interface Props {
   onSelect: (id: number) => void
 }
 
+const CARD_W = 72   // px — fixed width per card slot
+const TILE_W = 290  // px — fixed formula tile width
+
+interface SlotProps {
+  id: number
+  isResult?: boolean
+  onSelect: (id: number) => void
+}
+
+function Slot({ id, isResult, onSelect }: SlotProps) {
+  const card = byId[id]
+  if (!card) return <div style={{ width: CARD_W }} />
+  const typeImg = TYPE_IMAGES[card.Type]
+  const typeName = TYPE_NAMES[card.Type] || ''
+  const isMonster = card.Type < 20
+
+  return (
+    <div
+      style={{ width: CARD_W }}
+      className="flex flex-col items-center gap-0.5 cursor-pointer group shrink-0"
+      onClick={() => onSelect(id)}
+    >
+      <CardThumb card={card} size={isResult ? 48 : 44} />
+      {/* type icon + name — no attribute */}
+      <div className="flex items-center gap-0.5 w-full overflow-hidden justify-center">
+        {typeImg && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={typeImg} alt={typeName} title={typeName} width={9} height={9}
+            style={{ width: 9, height: 9, objectFit: 'contain', flexShrink: 0 }} />
+        )}
+        <span
+          className="text-[9px] text-[#777] group-hover:text-[#bbb] truncate leading-tight"
+          style={{ maxWidth: CARD_W - 14 }}
+        >
+          {card.Name}
+        </span>
+      </div>
+      {/* ATK / DEF for all cards */}
+      {isMonster ? (
+        <div className="text-[8px] text-center leading-tight">
+          <span style={{ color: atkColor(card.Attack) }}>{card.Attack}</span>
+          <span className="text-[#2a2a3a]">/</span>
+          <span className="text-[#444]">{card.Defense}</span>
+        </div>
+      ) : (
+        <div style={{ height: 12 }} />
+      )}
+    </div>
+  )
+}
+
 export function CombinesWithSection({ selfId, combinesWith, onSelect }: Props) {
   const [typeFilter, setTypeFilter] = useState<number | null>(null)
 
   if (combinesWith.size === 0) return null
 
-  const self = byId[selfId]
   const typeSet = new Set<number>()
   for (const [pid] of combinesWith) {
     const p = byId[pid]
@@ -40,8 +89,9 @@ export function CombinesWithSection({ selfId, combinesWith, onSelect }: Props) {
         ⬡ Combines With
         <span className="ml-2 text-[#333]">{combinesWith.size}</span>
       </h3>
+
       {typeSet.size > 1 && (
-        <div className="flex flex-wrap gap-1 px-4 mb-2">
+        <div className="flex flex-wrap gap-1 px-4 mb-3">
           {[...typeSet].map(t => {
             const name = TYPE_NAMES[t] || ''
             const color = TYPE_COLORS[name] || '#555'
@@ -63,42 +113,27 @@ export function CombinesWithSection({ selfId, combinesWith, onSelect }: Props) {
           })}
         </div>
       )}
-      <div className="space-y-px">
-        {filtered.map(([partnerId, resultId]) => {
-          const partner = byId[partnerId]
-          const result = byId[resultId]
-          if (!partner || !result) return null
-          return (
+
+      {/* Masonry via CSS columns with fixed-width tiles */}
+      <div className="px-4" style={{ columns: `${TILE_W}px`, columnGap: 8 }}>
+        {filtered.map(([partnerId, resultId]) => (
+          <div
+            key={partnerId}
+            className="break-inside-avoid mb-2 bg-[#0d0d18] border border-[#1a1a28] rounded-sm hover:border-[#252535] transition-colors"
+            style={{ width: '100%' }}
+          >
             <div
-              key={partnerId}
-              className="flex items-center gap-2 px-4 py-1.5 hover:bg-[#0e0e1a]"
+              className="flex items-center justify-between px-2 py-2"
+              style={{ width: '100%' }}
             >
-              {/* X: self (thumbnail only) */}
-              {self && (
-                <CardThumb card={self} size={44} onClick={() => onSelect(selfId)} />
-              )}
-              <span className="text-[#444] text-base font-light">+</span>
-              {/* Y: partner (thumbnail only) */}
-              <CardThumb card={partner} size={44} onClick={() => onSelect(partnerId)} />
-              <span className="text-[#444] text-base font-light">=</span>
-              {/* Z: result (thumbnail + name + stats) */}
-              <CardThumb card={result} size={52} onClick={() => onSelect(resultId)} />
-              <div className="flex-1 min-w-0">
-                <CardLabel
-                  card={result}
-                  iconSize={12}
-                  className="text-sm text-[#ccc] hover:text-white"
-                  onClick={() => onSelect(resultId)}
-                />
-                {result.Type < 20 && (
-                  <div className="text-xs mt-0.5" style={{ color: atkColor(result.Attack) }}>
-                    ATK {result.Attack} / DEF {result.Defense}
-                  </div>
-                )}
-              </div>
+              <Slot id={selfId} onSelect={onSelect} />
+              <span className="text-[#2a2a3a] text-sm font-light shrink-0 select-none">+</span>
+              <Slot id={partnerId} onSelect={onSelect} />
+              <span className="text-[#2a2a3a] text-sm font-light shrink-0 select-none">=</span>
+              <Slot id={resultId} isResult onSelect={onSelect} />
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
     </div>
   )

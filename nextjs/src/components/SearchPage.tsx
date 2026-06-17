@@ -45,6 +45,11 @@ export function SearchPage() {
     setQuery('')
   }, [])
 
+  const handleClear = useCallback(() => {
+    setQuery('')
+    setSelectedId(null)
+  }, [])
+
   const compact = selectedId !== null || !!query
 
   return (
@@ -59,6 +64,7 @@ export function SearchPage() {
                 query={query}
                 onChange={setQuery}
                 onSelect={handleSelect}
+                onClear={handleClear}
                 items={autocompleteItems}
               />
             </div>

@@ -10,10 +10,11 @@ interface Props {
   query: string
   onChange: (q: string) => void
   onSelect: (id: number) => void
+  onClear: () => void
   items: Card[]
 }
 
-export function SearchBar({ query, onChange, onSelect, items }: Props) {
+export function SearchBar({ query, onChange, onSelect, onClear, items }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [open, setOpen] = useState(false)
@@ -80,9 +81,20 @@ export function SearchBar({ query, onChange, onSelect, items }: Props) {
           onFocus={() => query && items.length > 0 && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder="Search cards..."
-          className="w-full bg-[#111118] border border-[#2a2a40] rounded-md pl-9 pr-4 py-2.5 text-sm text-[#e8e8f0] placeholder-[#444] focus:outline-none focus:border-[#0C5CAB] focus:ring-1 focus:ring-[#0C5CAB] transition-colors"
+          className="w-full bg-[#111118] border border-[#2a2a40] rounded-md pl-9 pr-9 py-2.5 text-sm text-[#e8e8f0] placeholder-[#444] focus:outline-none focus:border-[#0C5CAB] focus:ring-1 focus:ring-[#0C5CAB] transition-colors"
           spellCheck={false}
         />
+        {query && (
+          <button
+            onMouseDown={e => { e.preventDefault(); onClear(); setOpen(false); inputRef.current?.focus() }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#444] hover:text-[#888] transition-colors"
+            tabIndex={-1}
+          >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {open && items.length > 0 && (

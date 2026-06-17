@@ -51,7 +51,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect }: Props) 
   return (
     <div className="border-b border-[#1a1a28] bg-[#09090e]">
       {/* Card header */}
-      <div className="flex gap-4 p-4">
+      <div className="flex gap-4 p-4 items-start">
         <CardImage card={card} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -98,7 +98,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect }: Props) 
             </>
           )}
 
-          <p className="text-[10px] text-[#555] leading-relaxed whitespace-pre-line mt-2 line-clamp-4">
+          <p className="text-[11px] text-[#666] leading-relaxed whitespace-pre-line mt-2">
             {card.Description.replace(/\r\n/g, '\n')}
           </p>
         </div>
