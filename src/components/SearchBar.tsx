@@ -6,39 +6,51 @@ import type { NpcInfo } from '@/lib/dropsLoader'
 import { CardThumb } from './CardThumb'
 import { CardLabel } from './CardLabel'
 import { NpcImage } from './NpcImage'
-import { atkColor } from '@/lib/constants'
+import { atkColor, TYPE_NAMES, TYPE_IMAGES, TYPE_COLORS } from '@/lib/constants'
 
 export type SearchItem =
   | { kind: 'card'; card: Card }
   | { kind: 'npc'; npc: NpcInfo }
+
+export interface TypeSearchItem {
+  typeIdx: number
+  name: string
+  count: number
+}
 
 interface Props {
   query: string
   onChange: (q: string) => void
   onSelect: (id: number) => void
   onSelectNpc?: (id: number) => void
+  onSelectType?: (typeIdx: number) => void
   onClear?: () => void
   hasSelection?: boolean
   items: Card[]
   npcItems?: NpcInfo[]
+  typeItems?: TypeSearchItem[]
 }
 
-export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, hasSelection, items, npcItems = [] }: Props) {
+export function SearchBar({
+  query, onChange, onSelect, onSelectNpc, onSelectType,
+  onClear, hasSelection, items, npcItems = [], typeItems = [],
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [open, setOpen] = useState(false)
   const lastEscRef = useRef<number>(0)
 
-  const allItems: SearchItem[] = [
+  const mainItems: SearchItem[] = [
     ...items.map(card => ({ kind: 'card' as const, card })),
     ...npcItems.map(npc => ({ kind: 'npc' as const, npc })),
   ]
+  const totalItems = mainItems.length + typeItems.length
 
   useEffect(() => {
     setActiveIdx(-1)
-    setOpen(allItems.length > 0 && query.length > 0)
+    setOpen(totalItems > 0 && query.length > 0)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, npcItems, query])
+  }, [items, npcItems, typeItems, query])
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -52,26 +64,43 @@ export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, has
     return () => window.removeEventListener('keydown', handle)
   }, [])
 
-  const selectItem = useCallback((item: SearchItem) => {
+  const selectMain = useCallback((item: SearchItem) => {
     if (item.kind === 'card') onSelect(item.card.Id)
     else onSelectNpc?.(item.npc.id)
     setOpen(false)
     setActiveIdx(-1)
   }, [onSelect, onSelectNpc])
 
+  const selectType = useCallback((typeIdx: number) => {
+    onSelectType?.(typeIdx)
+    setOpen(false)
+    setActiveIdx(-1)
+  }, [onSelectType])
+
+  // Unified index: 0..mainItems.length-1 = main, mainItems.length..totalItems-1 = types
+  const activateIdx = (idx: number) => {
+    if (idx < mainItems.length) {
+      selectMain(mainItems[idx])
+    } else {
+      const typeItem = typeItems[idx - mainItems.length]
+      if (typeItem) selectType(typeItem.typeIdx)
+    }
+  }
+
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown' && open) {
       e.preventDefault()
-      setActiveIdx(i => Math.min(i + 1, allItems.length - 1))
+      setActiveIdx(i => Math.min(i + 1, totalItems - 1))
     } else if (e.key === 'ArrowUp' && open) {
       e.preventDefault()
       setActiveIdx(i => Math.max(i - 1, -1))
     } else if (e.key === 'Enter' && open) {
       e.preventDefault()
-      const target = activeIdx >= 0 ? allItems[activeIdx] : allItems[0]
-      if (target) selectItem(target)
+      const idx = activeIdx >= 0 ? activeIdx : 0
+      activateIdx(idx)
     } else if (e.key === 'Tab' && open) {
-      if (allItems[0]) { e.preventDefault(); selectItem(allItems[0]) }
+      e.preventDefault()
+      activateIdx(0)
     } else if (e.key === 'Escape') {
       e.preventDefault()
       const now = Date.now()
@@ -105,9 +134,9 @@ export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, has
           value={query}
           onChange={e => onChange(e.target.value)}
           onKeyDown={handleKey}
-          onFocus={() => query && allItems.length > 0 && setOpen(true)}
+          onFocus={() => query && totalItems > 0 && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Search cards or NPCs..."
+          placeholder="Search cards, NPCs or types..."
           className="w-full bg-[#111118] border border-[#2a2a40] rounded-md pl-9 pr-9 py-2.5 text-sm text-[#e8e8f0] placeholder-[#444] focus:outline-none focus:border-[#0C5CAB] focus:ring-1 focus:ring-[#0C5CAB] transition-colors"
           spellCheck={false}
         />
@@ -125,10 +154,11 @@ export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, has
         )}
       </div>
 
-      {open && allItems.length > 0 && (
+      {open && totalItems > 0 && (
         <div className="absolute z-50 top-full mt-1 w-full bg-[#0e0e18] border border-[#2a2a40] rounded-md shadow-xl overflow-hidden">
           <div className="max-h-72 overflow-y-auto">
-            {allItems.map((item, idx) => {
+            {/* Cards + NPCs */}
+            {mainItems.map((item, idx) => {
               const active = idx === activeIdx
               if (item.kind === 'card') {
                 const card = item.card
@@ -136,7 +166,7 @@ export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, has
                 return (
                   <div
                     key={`card-${card.Id}`}
-                    onMouseDown={() => selectItem(item)}
+                    onMouseDown={() => selectMain(item)}
                     className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
                   >
                     <CardThumb card={card} size={32} />
@@ -153,7 +183,7 @@ export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, has
                 return (
                   <div
                     key={`npc-${npc.id}`}
-                    onMouseDown={() => selectItem(item)}
+                    onMouseDown={() => selectMain(item)}
                     className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
                   >
                     <NpcImage slug={npc.slug} name={npc.name} size={32} />
@@ -163,6 +193,36 @@ export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, has
                 )
               }
             })}
+
+            {/* Type separator + items */}
+            {typeItems.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 px-3 pt-2 pb-1 border-t border-[#1e1e30]">
+                  <span className="text-[9px] uppercase tracking-widest text-[#333]">Types</span>
+                </div>
+                {typeItems.map((t, i) => {
+                  const globalIdx = mainItems.length + i
+                  const active = globalIdx === activeIdx
+                  const img = TYPE_IMAGES[t.typeIdx]
+                  const color = TYPE_COLORS[t.name] || '#666'
+                  return (
+                    <div
+                      key={`type-${t.typeIdx}`}
+                      onMouseDown={() => selectType(t.typeIdx)}
+                      className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
+                    >
+                      {img && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt={t.name} width={18} height={18}
+                          style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
+                      )}
+                      <span className="flex-1 text-xs truncate" style={{ color }}>{t.name}</span>
+                      <span className="text-[9px] text-[#333] shrink-0">{t.count}</span>
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </div>
         </div>
       )}
