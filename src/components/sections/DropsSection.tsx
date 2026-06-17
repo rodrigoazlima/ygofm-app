@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { cardDrops, MODE_LABELS, type DropMode } from '@/lib/dropsLoader'
-
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+import { NpcImage } from '@/components/NpcImage'
 
 const MODE_COLORS: Record<DropMode, string> = {
   sapow: '#4a9eff',
@@ -11,37 +9,12 @@ const MODE_COLORS: Record<DropMode, string> = {
   astec: '#66dd88',
 }
 
-function NpcImage({ slug, name }: { slug: string; name: string }) {
-  const [idx, setIdx] = useState(0)
-  const sources = [
-    `${BASE_PATH}/images/npc/${slug}.png`,
-    `https://www.yugiohfm.com/imgs/personagens/${slug}.png`,
-  ]
-  if (idx >= sources.length) {
-    return (
-      <div className="w-9 h-9 rounded-full bg-[#1a1a2e] flex items-center justify-center text-[8px] text-[#444]">
-        {name.slice(0, 2)}
-      </div>
-    )
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={sources[idx]}
-      alt={name}
-      width={36}
-      height={36}
-      onError={() => setIdx(i => i + 1)}
-      className="w-9 h-9 object-cover rounded-full bg-[#1a1a2e]"
-    />
-  )
-}
-
 interface Props {
   cardId: number
+  onSelectNpc?: (npcId: number) => void
 }
 
-export function DropsSection({ cardId }: Props) {
+export function DropsSection({ cardId, onSelectNpc }: Props) {
   const drops = cardDrops[cardId]
   if (!drops || drops.length === 0) return null
 
@@ -74,8 +47,12 @@ export function DropsSection({ cardId }: Props) {
       </h3>
       <div className="flex flex-col gap-2 px-4">
         {npcs.map(npc => (
-          <div key={npc.npcId} className="flex items-center gap-2">
-            <NpcImage slug={npc.npcSlug} name={npc.npcName} />
+          <div
+            key={npc.npcId}
+            className={`flex items-center gap-2 rounded-sm transition-colors ${onSelectNpc ? 'cursor-pointer hover:bg-[#0e0e1a] px-2 py-1 -mx-2' : ''}`}
+            onClick={() => onSelectNpc?.(npc.npcId)}
+          >
+            <NpcImage slug={npc.npcSlug} name={npc.npcName} size={36} />
             <div className="flex-1 min-w-0">
               <div className="text-[10px] text-[#888] truncate">{npc.npcName}</div>
               <div className="flex gap-1 mt-0.5 flex-wrap">

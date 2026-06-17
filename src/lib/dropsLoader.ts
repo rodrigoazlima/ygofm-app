@@ -10,6 +10,18 @@ export interface DropSource {
   drop_pct: number
 }
 
+export interface NpcDropEntry {
+  card_id: number
+  drop_pct: number
+}
+
+export interface NpcInfo {
+  id: number
+  slug: string
+  name: string
+  drops: Record<DropMode, NpcDropEntry[]>
+}
+
 export const MODE_LABELS: Record<DropMode, string> = {
   sapow: 'SA POW',
   bcd: 'BCD',
@@ -18,14 +30,32 @@ export const MODE_LABELS: Record<DropMode, string> = {
 
 const MODES: DropMode[] = ['sapow', 'bcd', 'astec']
 
-const cardDrops: Record<number, DropSource[]> = {}
-
-for (const npc of dropsRaw as Array<{
+type RawNpc = {
   id: number
   slug: string
   name: string
   drops: Record<string, Array<{ card_id: number; drop_pct: number }>>
-}>) {
+}
+
+export const npcList: NpcInfo[] = (dropsRaw as RawNpc[]).map(npc => ({
+  id: npc.id,
+  slug: npc.slug,
+  name: npc.name,
+  drops: {
+    sapow: npc.drops.sapow ?? [],
+    bcd: npc.drops.bcd ?? [],
+    astec: npc.drops.astec ?? [],
+  },
+}))
+
+export const npcById: Record<number, NpcInfo> = {}
+for (const npc of npcList) {
+  npcById[npc.id] = npc
+}
+
+const cardDrops: Record<number, DropSource[]> = {}
+
+for (const npc of dropsRaw as RawNpc[]) {
   for (const mode of MODES) {
     for (const drop of npc.drops[mode] ?? []) {
       const id = drop.card_id

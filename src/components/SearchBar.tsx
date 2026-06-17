@@ -2,29 +2,43 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react'
 import type { Card } from '@/lib/types'
+import type { NpcInfo } from '@/lib/dropsLoader'
 import { CardThumb } from './CardThumb'
 import { CardLabel } from './CardLabel'
+import { NpcImage } from './NpcImage'
 import { atkColor } from '@/lib/constants'
+
+export type SearchItem =
+  | { kind: 'card'; card: Card }
+  | { kind: 'npc'; npc: NpcInfo }
 
 interface Props {
   query: string
   onChange: (q: string) => void
   onSelect: (id: number) => void
+  onSelectNpc?: (id: number) => void
   onClear?: () => void
   hasSelection?: boolean
   items: Card[]
+  npcItems?: NpcInfo[]
 }
 
-export function SearchBar({ query, onChange, onSelect, onClear, hasSelection, items }: Props) {
+export function SearchBar({ query, onChange, onSelect, onSelectNpc, onClear, hasSelection, items, npcItems = [] }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [open, setOpen] = useState(false)
   const lastEscRef = useRef<number>(0)
 
+  const allItems: SearchItem[] = [
+    ...items.map(card => ({ kind: 'card' as const, card })),
+    ...npcItems.map(npc => ({ kind: 'npc' as const, npc })),
+  ]
+
   useEffect(() => {
     setActiveIdx(-1)
-    setOpen(items.length > 0 && query.length > 0)
-  }, [items, query])
+    setOpen(allItems.length > 0 && query.length > 0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, npcItems, query])
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -38,25 +52,26 @@ export function SearchBar({ query, onChange, onSelect, onClear, hasSelection, it
     return () => window.removeEventListener('keydown', handle)
   }, [])
 
-  const select = useCallback((id: number) => {
-    onSelect(id)
+  const selectItem = useCallback((item: SearchItem) => {
+    if (item.kind === 'card') onSelect(item.card.Id)
+    else onSelectNpc?.(item.npc.id)
     setOpen(false)
     setActiveIdx(-1)
-  }, [onSelect])
+  }, [onSelect, onSelectNpc])
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown' && open) {
       e.preventDefault()
-      setActiveIdx(i => Math.min(i + 1, items.length - 1))
+      setActiveIdx(i => Math.min(i + 1, allItems.length - 1))
     } else if (e.key === 'ArrowUp' && open) {
       e.preventDefault()
       setActiveIdx(i => Math.max(i - 1, -1))
     } else if (e.key === 'Enter' && open) {
       e.preventDefault()
-      const target = activeIdx >= 0 ? items[activeIdx] : items[0]
-      if (target) select(target.Id)
+      const target = activeIdx >= 0 ? allItems[activeIdx] : allItems[0]
+      if (target) selectItem(target)
     } else if (e.key === 'Tab' && open) {
-      if (items[0]) { e.preventDefault(); select(items[0].Id) }
+      if (allItems[0]) { e.preventDefault(); selectItem(allItems[0]) }
     } else if (e.key === 'Escape') {
       e.preventDefault()
       const now = Date.now()
@@ -64,11 +79,9 @@ export function SearchBar({ query, onChange, onSelect, onClear, hasSelection, it
       lastEscRef.current = now
 
       if (open || query) {
-        // First action: close dropdown + clear query
         setOpen(false)
         onChange('')
       } else if (isDouble && onClear) {
-        // Second Esc with nothing left to clear → clear card selection
         onClear()
         lastEscRef.current = 0
       }
@@ -92,9 +105,9 @@ export function SearchBar({ query, onChange, onSelect, onClear, hasSelection, it
           value={query}
           onChange={e => onChange(e.target.value)}
           onKeyDown={handleKey}
-          onFocus={() => query && items.length > 0 && setOpen(true)}
+          onFocus={() => query && allItems.length > 0 && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Search cards..."
+          placeholder="Search cards or NPCs..."
           className="w-full bg-[#111118] border border-[#2a2a40] rounded-md pl-9 pr-9 py-2.5 text-sm text-[#e8e8f0] placeholder-[#444] focus:outline-none focus:border-[#0C5CAB] focus:ring-1 focus:ring-[#0C5CAB] transition-colors"
           spellCheck={false}
         />
@@ -112,28 +125,43 @@ export function SearchBar({ query, onChange, onSelect, onClear, hasSelection, it
         )}
       </div>
 
-      {open && items.length > 0 && (
+      {open && allItems.length > 0 && (
         <div className="absolute z-50 top-full mt-1 w-full bg-[#0e0e18] border border-[#2a2a40] rounded-md shadow-xl overflow-hidden">
           <div className="max-h-72 overflow-y-auto">
-            {items.map((card, idx) => {
-              const isMonster = card.Type < 20
-              return (
-                <div
-                  key={card.Id}
-                  onMouseDown={() => select(card.Id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${
-                    idx === activeIdx ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'
-                  }`}
-                >
-                  <CardThumb card={card} size={32} />
-                  <CardLabel card={card} iconSize={12} className="flex-1 text-xs text-[#ccc]" />
-                  {isMonster ? (
-                    <span className="text-[10px] shrink-0" style={{ color: atkColor(card.Attack) }}>
-                      {card.Attack}
-                    </span>
-                  ) : null}
-                </div>
-              )
+            {allItems.map((item, idx) => {
+              const active = idx === activeIdx
+              if (item.kind === 'card') {
+                const card = item.card
+                const isMonster = card.Type < 20
+                return (
+                  <div
+                    key={`card-${card.Id}`}
+                    onMouseDown={() => selectItem(item)}
+                    className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
+                  >
+                    <CardThumb card={card} size={32} />
+                    <CardLabel card={card} iconSize={12} className="flex-1 text-xs text-[#ccc]" />
+                    {isMonster && (
+                      <span className="text-[10px] shrink-0" style={{ color: atkColor(card.Attack) }}>
+                        {card.Attack}
+                      </span>
+                    )}
+                  </div>
+                )
+              } else {
+                const npc = item.npc
+                return (
+                  <div
+                    key={`npc-${npc.id}`}
+                    onMouseDown={() => selectItem(item)}
+                    className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
+                  >
+                    <NpcImage slug={npc.slug} name={npc.name} size={32} />
+                    <span className="flex-1 text-xs text-[#ccc] truncate">{npc.name}</span>
+                    <span className="text-[9px] text-[#444] shrink-0">NPC</span>
+                  </div>
+                )
+              }
             })}
           </div>
         </div>

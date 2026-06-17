@@ -15,6 +15,7 @@ import { DropsSection } from './sections/DropsSection'
 interface Props {
   cardId: number
   onSelect: (id: number) => void
+  onSelectNpc?: (npcId: number) => void
   query?: string
 }
 
@@ -38,7 +39,7 @@ function CardImage({ card }: { card: Card }) {
   )
 }
 
-export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: Props) {
+export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, query }: Props) {
   const card = byId[cardId]
   const relations = useCardRelations(cardId)
 
@@ -171,7 +172,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: 
               query={query}
             />
             <MadeFromSection selfId={cardId} madeFrom={relations.madeFrom} onSelect={onSelect} query={query} />
-            <DropsSection cardId={cardId} />
+            <DropsSection cardId={cardId} onSelectNpc={onSelectNpc} />
           </>
         )}
       </div>
