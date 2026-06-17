@@ -398,87 +398,134 @@ function closeModal() {
 
 function applyPartnerFilter(q) {
   const lq = q.toLowerCase().trim();
-  let totalMatches = 0;
 
-  // fi-groups: matching stay, non-matching sink below separator
-  const fiGroups = [...mBody.querySelectorAll(".fi-group")];
-  if (fiGroups.length > 0) {
-    const fiSection = fiGroups[0].closest(".m-section");
-    let sep = fiSection.querySelector(".fi-incompat-sep");
-    if (!sep) {
-      sep = document.createElement("div");
-      sep.className = "fi-incompat-sep";
-      fiSection.appendChild(sep);
-    }
-    let incompCount = 0;
-    for (const row of fiGroups) {
-      const matches = !lq || (row.dataset.partners||"").includes(lq);
-      row.classList.toggle("fi-incompat", !matches);
-      if (!matches) incompCount++; else totalMatches++;
-    }
-    sep.classList.toggle("visible", !!lq && incompCount > 0);
-    if (lq && incompCount > 0) sep.textContent = `INCOMPATIBLE (${incompCount})`;
+  // Remove previous combined incompat section
+  const oldSec = mBody.querySelector(".incompat-all-sec");
+  if (oldSec) oldSec.remove();
+
+  if (!lq) {
+    for (const row of mBody.querySelectorAll(".row-hidden")) row.classList.remove("row-hidden");
+    for (const sec of mBody.querySelectorAll(".m-section")) sec.style.display = "";
+    updateIncompatiblePanel("", 1);
+    return;
   }
-  // eq-rows: same sink-to-bottom behavior as fi-groups
-  const eqRows = [...mBody.querySelectorAll(".eq-row")];
-  if (eqRows.length > 0) {
-    const eqSection = eqRows[0].closest(".m-section");
-    let eqSep = eqSection.querySelector(".eq-incompat-sep");
-    if (!eqSep) {
-      eqSep = document.createElement("div");
-      eqSep.className = "eq-incompat-sep";
-      eqSection.appendChild(eqSep);
+
+  let totalMatches = 0;
+  const incompatItems = []; // {kind, card?, m1?, m2?}
+
+  for (const row of mBody.querySelectorAll(".fi-group")) {
+    const matches = (row.dataset.partners||"").includes(lq);
+    row.classList.toggle("row-hidden", !matches);
+    if (matches) { totalMatches++; }
+    else {
+      const card = byId[Number(row.dataset.cardId)];
+      if (card) incompatItems.push({kind:"fi", card});
     }
-    let eqIncompat = 0;
-    for (const row of eqRows) {
-      const matches = !lq || (row.dataset.name||"").includes(lq);
-      row.classList.toggle("eq-incompat", !matches);
-      if (!matches) eqIncompat++; else totalMatches++;
-    }
-    eqSep.classList.toggle("visible", !!lq && eqIncompat > 0);
-    if (lq && eqIncompat > 0) eqSep.textContent = `INCOMPATIBLE (${eqIncompat})`;
   }
-  const cwRows = [...mBody.querySelectorAll(".cw-row")];
-  if (cwRows.length > 0) {
-    const cwSection = cwRows[0].closest(".m-section");
-    let cwSep = cwSection.querySelector(".cw-incompat-sep");
-    if (!cwSep) {
-      cwSep = document.createElement("div");
-      cwSep.className = "cw-incompat-sep";
-      cwSection.appendChild(cwSep);
+
+  for (const row of mBody.querySelectorAll(".eq-row")) {
+    const matches = (row.dataset.name||"").includes(lq);
+    row.classList.toggle("row-hidden", !matches);
+    if (matches) { totalMatches++; }
+    else {
+      const card = byId[Number(row.dataset.cardId)];
+      if (card) incompatItems.push({kind:"eq", card});
     }
-    let cwIncompat = 0;
-    for (const row of cwRows) {
-      const textOk = !lq || (row.dataset.partners||"").includes(lq);
-      const typeOk = _cwTypeFilter === null || Number(row.dataset.typeIdx) === _cwTypeFilter;
-      const matches = textOk && typeOk;
-      row.classList.toggle("cw-incompat", !matches);
-      if (!matches) cwIncompat++; else totalMatches++;
-    }
-    cwSep.classList.toggle("visible", !!lq && cwIncompat > 0);
-    if (lq && cwIncompat > 0) cwSep.textContent = `INCOMPATIBLE (${cwIncompat})`;
   }
-  const mfRows = [...mBody.querySelectorAll(".mf-row")];
-  if (mfRows.length > 0) {
-    const mfSection = mfRows[0].closest(".m-section");
-    let mfSep = mfSection.querySelector(".mf-incompat-sep");
-    if (!mfSep) {
-      mfSep = document.createElement("div");
-      mfSep.className = "mf-incompat-sep";
-      mfSection.appendChild(mfSep);
+
+  for (const row of mBody.querySelectorAll(".cw-row")) {
+    const textOk = (row.dataset.partners||"").includes(lq);
+    const typeOk = _cwTypeFilter === null || Number(row.dataset.typeIdx) === _cwTypeFilter;
+    const matches = textOk && typeOk;
+    row.classList.toggle("row-hidden", !matches);
+    if (matches) { totalMatches++; }
+    else {
+      const card = byId[Number(row.dataset.cardId)];
+      if (card) incompatItems.push({kind:"cw", card});
     }
-    let mfIncompat = 0;
-    for (const row of mfRows) {
-      const textOk = !lq || (row.dataset.materials||"").includes(lq);
-      const typeOk = _mfTypeFilter === null ||
-        (row.dataset.types||"").split("|").map(Number).includes(_mfTypeFilter);
-      const matches = textOk && typeOk;
-      row.classList.toggle("mf-incompat", !matches);
-      if (!matches) mfIncompat++; else totalMatches++;
-    }
-    mfSep.classList.toggle("visible", !!lq && mfIncompat > 0);
-    if (lq && mfIncompat > 0) mfSep.textContent = `INCOMPATIBLE (${mfIncompat})`;
   }
+
+  for (const row of mBody.querySelectorAll(".mf-row")) {
+    const textOk = (row.dataset.materials||"").includes(lq);
+    const typeOk = _mfTypeFilter === null ||
+      (row.dataset.types||"").split("|").map(Number).includes(_mfTypeFilter);
+    const matches = textOk && typeOk;
+    row.classList.toggle("row-hidden", !matches);
+    if (matches) { totalMatches++; }
+    else {
+      const m1 = byId[Number(row.dataset.cardId)];
+      const m2 = byId[Number(row.dataset.card2Id)];
+      if (m1 && m2) incompatItems.push({kind:"mf", m1, m2});
+    }
+  }
+
+  // Hide sections whose rows are all hidden
+  for (const sec of mBody.querySelectorAll(".m-section")) {
+    const hasVisible = sec.querySelector(
+      ".fi-group:not(.row-hidden),.cw-row:not(.row-hidden),.mf-row:not(.row-hidden),.eq-row:not(.row-hidden)"
+    );
+    sec.style.display = hasVisible ? "" : "none";
+  }
+
+  // Single combined incompat section at bottom
+  if (incompatItems.length > 0) {
+    const sec = document.createElement("div");
+    sec.className = "m-section incompat-all-sec";
+
+    const title = document.createElement("div");
+    title.className = "m-section-title incompat-all-title";
+    title.textContent = `✕ INCOMPATIBLE (${incompatItems.length})`;
+    sec.appendChild(title);
+
+    for (const item of incompatItems) {
+      const row = document.createElement("div");
+      row.className = "cw-row";
+
+      if (item.kind === "mf") {
+        const t1 = miniThumb(item.m1, "fi-thumb");
+        t1.style.cssText = "width:36px;height:36px;flex-shrink:0";
+        row.appendChild(t1);
+        const n1 = document.createElement("div");
+        n1.className = "mp-name";
+        n1.textContent = item.m1.Name;
+        row.appendChild(n1);
+        const plus = document.createElement("span");
+        plus.className = "plus";
+        plus.textContent = "+";
+        row.appendChild(plus);
+        const t2 = miniThumb(item.m2, "fi-thumb");
+        t2.style.cssText = "width:36px;height:36px;flex-shrink:0";
+        row.appendChild(t2);
+        const n2 = document.createElement("div");
+        n2.className = "mp-name";
+        n2.textContent = item.m2.Name;
+        row.appendChild(n2);
+        row.addEventListener("click", () => openModal(item.m1.Id));
+      } else {
+        const thumb = miniThumb(item.card, "fi-thumb");
+        thumb.style.cssText = "width:36px;height:36px;flex-shrink:0";
+        row.appendChild(thumb);
+        const info = document.createElement("div");
+        info.style.cssText = "flex:1;min-width:0";
+        const name = document.createElement("div");
+        name.className = "mp-name";
+        name.textContent = item.card.Name;
+        const sub = document.createElement("div");
+        sub.className = "mp-type";
+        sub.innerHTML = typeIcon(item.card.Type, 12) + escHtml(cardTypes[item.card.Type]||"") +
+          (item.card.Type < 20 ? " · " + item.card.Attack : "");
+        info.appendChild(name);
+        info.appendChild(sub);
+        row.appendChild(info);
+        row.addEventListener("click", () => openModal(item.card.Id));
+      }
+
+      sec.appendChild(row);
+    }
+
+    mBody.appendChild(sec);
+  }
+
   updateIncompatiblePanel(lq, totalMatches);
 }
 
@@ -895,6 +942,7 @@ function makeEquipsWithSection(c) {
     const row = document.createElement("div");
     row.className = "eq-row";
     row.dataset.name = card.Name.toLowerCase();
+    row.dataset.cardId = card.Id;
 
     const thumb = miniThumb(card, "fi-thumb");
     thumb.style.cssText = "width:42px;height:42px;flex-shrink:0";
@@ -980,6 +1028,7 @@ function makeMadeFromSection(c) {
     row.dataset.materials = [m1.Name, m2.Name].map(n => n.toLowerCase()).join("|");
     row.dataset.types = m1.Type + "|" + m2.Type;
     row.dataset.cardId = m1.Id;
+    row.dataset.card2Id = m2.Id;
 
     row.appendChild(miniThumb(m1));
 
