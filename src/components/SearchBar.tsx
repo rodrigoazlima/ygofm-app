@@ -47,6 +47,7 @@ export function SearchBar({
   const [activeIdx, setActiveIdx] = useState(-1)
   const [open, setOpen] = useState(false)
   const lastEscRef = useRef<number>(0)
+  const lastBtnClickRef = useRef<number>(0)
 
   const mainItems: SearchItem[] = [
     ...items.map(card => ({ kind: 'card' as const, card })),
@@ -124,12 +125,17 @@ export function SearchBar({
       const isDouble = now - lastEscRef.current < 500
       lastEscRef.current = now
 
-      if (open || query) {
+      if (isDouble) {
         setOpen(false)
         onChange('')
-      } else if (isDouble && onClear) {
-        onClear()
+        onClear?.()
         lastEscRef.current = 0
+      } else if (open) {
+        setOpen(false)
+      } else if (query) {
+        onChange('')
+      } else if (hasSelection && onClear) {
+        onClear()
       }
     }
   }
@@ -159,10 +165,26 @@ export function SearchBar({
         />
         {showClear && (
           <button
-            onMouseDown={e => { e.preventDefault(); onClear?.(); setOpen(false); inputRef.current?.focus() }}
+            onMouseDown={e => {
+              e.preventDefault()
+              const now = Date.now()
+              const isDouble = now - lastBtnClickRef.current < 500
+              lastBtnClickRef.current = now
+              if (isDouble) {
+                onChange('')
+                onClear?.()
+                lastBtnClickRef.current = 0
+              } else if (query) {
+                onChange('')
+              } else {
+                onClear?.()
+              }
+              setOpen(false)
+              inputRef.current?.focus()
+            }}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#444] hover:text-[#888] transition-colors"
             tabIndex={-1}
-            title="Clear (double Esc)"
+            title="Clear text (double-click: clear all)"
           >
             <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
