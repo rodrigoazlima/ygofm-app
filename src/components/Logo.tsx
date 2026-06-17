@@ -1,12 +1,14 @@
 interface Props {
   compact: boolean
+  onClear?: () => void
 }
 
-export function Logo({ compact }: Props) {
+export function Logo({ compact, onClear }: Props) {
   if (compact) {
     return (
       <span
-        className="font-bold text-lg leading-none shrink-0"
+        onClick={onClear}
+        className={`font-bold text-lg leading-none shrink-0 ${onClear ? 'cursor-pointer opacity-90 hover:opacity-100 transition-opacity' : ''}`}
         style={{
           background: 'linear-gradient(90deg, #f5c842, #fff8dc, #d4a017)',
           WebkitBackgroundClip: 'text',

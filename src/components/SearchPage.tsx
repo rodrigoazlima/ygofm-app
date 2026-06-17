@@ -48,16 +48,22 @@ export function SearchPage() {
     }
   }, [])
 
-  // Sync state → URL
+  // URL → local state: handles back/forward navigation
   useEffect(() => {
-    if (fadingOut) return
-    const params = new URLSearchParams()
-    if (selectedId !== null) params.set('card', String(selectedId))
-    if (selectedNpcId !== null) params.set('npc', String(selectedNpcId))
-    if (query) params.set('q', query)
-    const qs = params.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [query, selectedId, selectedNpcId, fadingOut, pathname, router])
+    // Cancel any in-progress fade so it doesn't clobber the restored state
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+    fadeTimerRef.current = null
+
+    const rawCard = searchParams.get('card')
+    const rawNpc = searchParams.get('npc')
+    const newCardId = rawCard ? (byId[Number(rawCard)] ? Number(rawCard) : null) : null
+    const newNpcId = rawNpc ? (npcById[Number(rawNpc)] ? Number(rawNpc) : null) : null
+
+    setSelectedId(newCardId)
+    setSelectedNpcId(newNpcId)
+    setQuery(searchParams.get('q') ?? '')
+    setFadingOut(false)
+  }, [searchParams])
 
   const autocompleteCards = useMemo(() => {
     if (!query) return []
@@ -84,27 +90,27 @@ export function SearchPage() {
     }
     if (query) {
       const q = query.toLowerCase()
-      const fromCards = new Set(cards.filter(c => c.Name.toLowerCase().includes(q)).map(c => c.Id))
-      // If query matches an NPC, highlight all its dropped cards
+      const ids = new Set(cards.filter(c => c.Name.toLowerCase().includes(q)).map(c => c.Id))
       const matchedNpc = npcList.find(n => n.name.toLowerCase().includes(q))
       if (matchedNpc) {
         for (const mode of ['sapow', 'bcd', 'astec'] as const) {
-          for (const d of matchedNpc.drops[mode]) fromCards.add(d.card_id)
+          for (const d of matchedNpc.drops[mode]) ids.add(d.card_id)
         }
       }
-      return fromCards
+      return ids
     }
     return new Set<number>()
   }, [selectedId, selectedNpcId, query])
 
-  const startFade = useCallback((then: () => void) => {
-    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
-    setFadingOut(true)
-    fadeTimerRef.current = setTimeout(() => {
-      then()
-      setFadingOut(false)
-    }, FADE_MS)
-  }, [])
+  const handleQueryChange = useCallback((q: string) => {
+    setQuery(q)
+    const params = new URLSearchParams()
+    if (selectedId !== null) params.set('card', String(selectedId))
+    if (selectedNpcId !== null) params.set('npc', String(selectedNpcId))
+    if (q) params.set('q', q)
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [selectedId, selectedNpcId, pathname, router])
 
   const handleSelect = useCallback((id: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
@@ -112,7 +118,8 @@ export function SearchPage() {
     setSelectedId(id)
     setSelectedNpcId(null)
     setQuery('')
-  }, [])
+    router.push(`${pathname}?card=${id}`, { scroll: false })
+  }, [pathname, router])
 
   const handleSelectNpc = useCallback((id: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
@@ -120,16 +127,21 @@ export function SearchPage() {
     setSelectedNpcId(id)
     setSelectedId(null)
     setQuery('')
-  }, [])
+    router.push(`${pathname}?npc=${id}`, { scroll: false })
+  }, [pathname, router])
 
   const handleClear = useCallback(() => {
     setQuery('')
     if (!hasSelection) return
-    startFade(() => {
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+    setFadingOut(true)
+    fadeTimerRef.current = setTimeout(() => {
       setSelectedId(null)
       setSelectedNpcId(null)
-    })
-  }, [hasSelection, startFade])
+      setFadingOut(false)
+      router.push(pathname, { scroll: false })
+    }, FADE_MS)
+  }, [hasSelection, pathname, router])
 
   // Auto-select when exactly one card result and no selection
   useEffect(() => {
@@ -149,11 +161,11 @@ export function SearchPage() {
       <header className="shrink-0 z-40 bg-[#09090b] border-b border-[#151520] px-4 pt-3 pb-3">
         {compact ? (
           <div className="flex items-center gap-3">
-            <Logo compact />
+            <Logo compact onClear={handleClear} />
             <div className="flex-1">
               <SearchBar
                 query={query}
-                onChange={setQuery}
+                onChange={handleQueryChange}
                 onSelect={handleSelect}
                 onSelectNpc={handleSelectNpc}
                 onClear={handleClear}
@@ -168,7 +180,7 @@ export function SearchPage() {
             <Logo compact={false} />
             <SearchBar
               query={query}
-              onChange={setQuery}
+              onChange={handleQueryChange}
               onSelect={handleSelect}
               onSelectNpc={handleSelectNpc}
               items={autocompleteCards}
