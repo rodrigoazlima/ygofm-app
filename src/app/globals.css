@@ -31,3 +31,12 @@ body {
 .card-detail-enter {
   animation: card-detail-in 0.2s ease-out both;
 }
+
+@keyframes card-detail-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+.card-detail-exit {
+  animation: card-detail-out 0.18s ease-in both;
+  pointer-events: none;
+}

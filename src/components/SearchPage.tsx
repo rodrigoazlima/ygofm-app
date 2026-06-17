@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { cards, computeRelatedIds, byId } from '@/lib/dataLoader'
 import { Logo } from './Logo'
@@ -8,6 +8,8 @@ import { SearchBar } from './SearchBar'
 import { CardDetail } from './CardDetail'
 import { CardGrid } from './CardGrid'
 import { localUrl } from '@/lib/imageHelpers'
+
+const FADE_MS = 180
 
 export function SearchPage() {
   const router = useRouter()
@@ -22,6 +24,8 @@ export function SearchPage() {
     const id = Number(raw)
     return byId[id] ? id : null
   })
+  const [fadingOut, setFadingOut] = useState(false)
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isInitial = !query && selectedId === null
 
@@ -36,14 +40,15 @@ export function SearchPage() {
     }
   }, [])
 
-  // Sync state → URL (replace, no history push)
+  // Sync state → URL (replace, no history push). Skip during fade to avoid premature URL clear.
   useEffect(() => {
+    if (fadingOut) return
     const params = new URLSearchParams()
     if (selectedId !== null) params.set('card', String(selectedId))
     if (query) params.set('q', query)
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [query, selectedId, pathname, router])
+  }, [query, selectedId, fadingOut, pathname, router])
 
   const autocompleteItems = useMemo(() => {
     if (!query) return []
@@ -61,23 +66,36 @@ export function SearchPage() {
   }, [selectedId, query])
 
   const handleSelect = useCallback((id: number) => {
+    // Cancel any in-progress fade-out
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+    setFadingOut(false)
     setSelectedId(id)
     setQuery('')
   }, [])
 
-  // Auto-select when exactly one result and no card selected
-  useEffect(() => {
-    if (selectedId === null && autocompleteItems.length === 1) {
-      handleSelect(autocompleteItems[0].Id)
-    }
-  }, [autocompleteItems, selectedId, handleSelect])
-
   const handleClear = useCallback(() => {
     setQuery('')
-    setSelectedId(null)
+    if (selectedId === null) return
+    setFadingOut(true)
+    fadeTimerRef.current = setTimeout(() => {
+      setSelectedId(null)
+      setFadingOut(false)
+    }, FADE_MS)
+  }, [selectedId])
+
+  // Auto-select when exactly one result and no card selected
+  useEffect(() => {
+    if (selectedId === null && !fadingOut && autocompleteItems.length === 1) {
+      handleSelect(autocompleteItems[0].Id)
+    }
+  }, [autocompleteItems, selectedId, fadingOut, handleSelect])
+
+  // Cleanup timer on unmount
+  useEffect(() => () => {
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
   }, [])
 
-  const compact = selectedId !== null || !!query
+  const compact = selectedId !== null || fadingOut || !!query
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#09090b]">
@@ -113,7 +131,7 @@ export function SearchPage() {
       {/* Scrollable body */}
       <main className="flex-1 overflow-y-auto">
         {selectedId !== null && (
-          <div key={selectedId} className="card-detail-enter">
+          <div key={selectedId} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
             <CardDetail cardId={selectedId} onSelect={handleSelect} query={query} />
           </div>
         )}
