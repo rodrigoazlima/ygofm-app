@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { cards, computeRelatedIds } from '@/lib/dataLoader'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { cards, computeRelatedIds, byId } from '@/lib/dataLoader'
 import { Logo } from './Logo'
 import { SearchBar } from './SearchBar'
 import { CardDetail } from './CardDetail'
@@ -9,8 +10,18 @@ import { CardGrid } from './CardGrid'
 import { localUrl } from '@/lib/imageHelpers'
 
 export function SearchPage() {
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Initialize state from URL on first render
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const raw = searchParams.get('card')
+    if (!raw) return null
+    const id = Number(raw)
+    return byId[id] ? id : null
+  })
 
   const isInitial = !query && selectedId === null
 
@@ -24,6 +35,15 @@ export function SearchPage() {
       }
     }
   }, [])
+
+  // Sync state → URL (replace, no history push)
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (selectedId !== null) params.set('card', String(selectedId))
+    if (query) params.set('q', query)
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [query, selectedId, pathname, router])
 
   const autocompleteItems = useMemo(() => {
     if (!query) return []
@@ -45,6 +65,13 @@ export function SearchPage() {
     setQuery('')
   }, [])
 
+  // Auto-select when exactly one result and no card selected
+  useEffect(() => {
+    if (selectedId === null && autocompleteItems.length === 1) {
+      handleSelect(autocompleteItems[0].Id)
+    }
+  }, [autocompleteItems, selectedId, handleSelect])
+
   const handleClear = useCallback(() => {
     setQuery('')
     setSelectedId(null)
@@ -65,6 +92,7 @@ export function SearchPage() {
                 onChange={setQuery}
                 onSelect={handleSelect}
                 onClear={handleClear}
+                hasSelection={selectedId !== null}
                 items={autocompleteItems}
               />
             </div>
@@ -85,7 +113,9 @@ export function SearchPage() {
       {/* Scrollable body */}
       <main className="flex-1 overflow-y-auto">
         {selectedId !== null && (
-          <CardDetail cardId={selectedId} onSelect={handleSelect} />
+          <div key={selectedId} className="card-detail-enter">
+            <CardDetail cardId={selectedId} onSelect={handleSelect} query={query} />
+          </div>
         )}
         <CardGrid
           brightIds={brightIds}

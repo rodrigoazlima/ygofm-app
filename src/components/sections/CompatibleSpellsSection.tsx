@@ -8,10 +8,18 @@ interface Props {
   compatibleSpells: number[]
   isEquip: boolean
   onSelect: (id: number) => void
+  query?: string
 }
 
-export function CompatibleSpellsSection({ compatibleSpells, isEquip, onSelect }: Props) {
+export function CompatibleSpellsSection({ compatibleSpells, isEquip, onSelect, query }: Props) {
   if (compatibleSpells.length === 0) return null
+
+  const q = query?.toLowerCase() ?? ''
+  const visible = q
+    ? compatibleSpells.filter(id => byId[id]?.Name.toLowerCase().includes(q))
+    : compatibleSpells
+
+  if (visible.length === 0) return null
 
   const label = isEquip ? '✦ Equips Onto' : '✦ Compatible Spells'
 
@@ -19,10 +27,10 @@ export function CompatibleSpellsSection({ compatibleSpells, isEquip, onSelect }:
     <div className="mb-6">
       <h3 className="text-[10px] uppercase tracking-widest text-[#555] mb-2 px-4">
         {label}
-        <span className="ml-2 text-[#333]">{compatibleSpells.length}</span>
+        <span className="ml-2 text-[#333]">{visible.length}</span>
       </h3>
       <div className="flex flex-wrap gap-2 px-4">
-        {compatibleSpells.map(id => {
+        {visible.map(id => {
           const card = byId[id]
           if (!card) return null
           const typeName = TYPE_NAMES[card.Type] || ''

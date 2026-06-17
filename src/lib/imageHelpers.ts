@@ -18,8 +18,11 @@ export function fullUrl(card: Card): string {
   return k ? `${FULL_BASE}/${k}.jpg` : ''
 }
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+
 export function localUrl(card: Card): string {
-  return localImages[card.Id] || fandomImages[card.Id] || ''
+  const path = localImages[card.Id] || fandomImages[card.Id] || ''
+  return path ? `${BASE_PATH}${path}` : ''
 }
 
 // Returns ordered fallback sources for thumbnails: local WebP first, then CDN

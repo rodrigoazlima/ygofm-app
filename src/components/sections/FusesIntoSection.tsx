@@ -8,22 +8,33 @@ import { atkColor } from '@/lib/constants'
 interface Props {
   fusesInto: Map<number, number[]>
   onSelect: (id: number) => void
+  query?: string
 }
 
-export function FusesIntoSection({ fusesInto, onSelect }: Props) {
+export function FusesIntoSection({ fusesInto, onSelect, query }: Props) {
   if (fusesInto.size === 0) return null
 
-  const sorted = [...fusesInto.entries()].sort((a, b) => {
-    const ra = byId[a[0]]?.Attack ?? 0
-    const rb = byId[b[0]]?.Attack ?? 0
-    return rb - ra
-  })
+  const q = query?.toLowerCase() ?? ''
+
+  const sorted = [...fusesInto.entries()]
+    .filter(([resultId, partners]) => {
+      if (!q) return true
+      if (byId[resultId]?.Name.toLowerCase().includes(q)) return true
+      return partners.some(pid => byId[pid]?.Name.toLowerCase().includes(q))
+    })
+    .sort((a, b) => {
+      const ra = byId[a[0]]?.Attack ?? 0
+      const rb = byId[b[0]]?.Attack ?? 0
+      return rb - ra
+    })
+
+  if (sorted.length === 0) return null
 
   return (
     <div className="mb-6">
       <h3 className="text-[10px] uppercase tracking-widest text-[#555] mb-2 px-4">
         ⚔ Fuses Into
-        <span className="ml-2 text-[#333]">{fusesInto.size}</span>
+        <span className="ml-2 text-[#333]">{sorted.length}</span>
       </h3>
       <div className="space-y-1">
         {sorted.map(([resultId, partners]) => {

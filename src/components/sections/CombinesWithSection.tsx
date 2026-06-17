@@ -9,6 +9,7 @@ interface Props {
   selfId: number
   combinesWith: Map<number, number>
   onSelect: (id: number) => void
+  query?: string
 }
 
 const CARD_W = 72   // px — fixed width per card slot
@@ -62,16 +63,12 @@ function Slot({ id, isResult, onSelect }: SlotProps) {
   )
 }
 
-export function CombinesWithSection({ selfId, combinesWith, onSelect }: Props) {
+export function CombinesWithSection({ selfId, combinesWith, onSelect, query }: Props) {
   const [typeFilter, setTypeFilter] = useState<number | null>(null)
 
   if (combinesWith.size === 0) return null
 
-  const typeSet = new Set<number>()
-  for (const [pid] of combinesWith) {
-    const p = byId[pid]
-    if (p) typeSet.add(p.Type)
-  }
+  const q = query?.toLowerCase() ?? ''
 
   const sorted = [...combinesWith.entries()].sort((a, b) => {
     const ra = byId[a[1]]?.Attack ?? 0
@@ -79,15 +76,29 @@ export function CombinesWithSection({ selfId, combinesWith, onSelect }: Props) {
     return rb - ra
   })
 
-  const filtered = typeFilter !== null
-    ? sorted.filter(([pid]) => byId[pid]?.Type === typeFilter)
+  const queryFiltered = q
+    ? sorted.filter(([pid, rid]) =>
+        byId[pid]?.Name.toLowerCase().includes(q) ||
+        byId[rid]?.Name.toLowerCase().includes(q))
     : sorted
+
+  if (queryFiltered.length === 0) return null
+
+  const typeSet = new Set<number>()
+  for (const [pid] of queryFiltered) {
+    const p = byId[pid]
+    if (p) typeSet.add(p.Type)
+  }
+
+  const filtered = typeFilter !== null
+    ? queryFiltered.filter(([pid]) => byId[pid]?.Type === typeFilter)
+    : queryFiltered
 
   return (
     <div className="mb-6">
       <h3 className="text-[10px] uppercase tracking-widest text-[#555] mb-2 px-4">
         ⬡ Combines With
-        <span className="ml-2 text-[#333]">{combinesWith.size}</span>
+        <span className="ml-2 text-[#333]">{queryFiltered.length}</span>
       </h3>
 
       {typeSet.size > 1 && (

@@ -10,14 +10,16 @@ interface Props {
   query: string
   onChange: (q: string) => void
   onSelect: (id: number) => void
-  onClear: () => void
+  onClear?: () => void
+  hasSelection?: boolean
   items: Card[]
 }
 
-export function SearchBar({ query, onChange, onSelect, onClear, items }: Props) {
+export function SearchBar({ query, onChange, onSelect, onClear, hasSelection, items }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [open, setOpen] = useState(false)
+  const lastEscRef = useRef<number>(0)
 
   useEffect(() => {
     setActiveIdx(-1)
@@ -25,7 +27,6 @@ export function SearchBar({ query, onChange, onSelect, onClear, items }: Props) 
   }, [items, query])
 
   useEffect(() => {
-    // Route global keypresses to this input
     const handle = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
@@ -44,24 +45,37 @@ export function SearchBar({ query, onChange, onSelect, onClear, items }: Props) 
   }, [onSelect])
 
   const handleKey = (e: React.KeyboardEvent) => {
-    if (!open) return
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'ArrowDown' && open) {
       e.preventDefault()
       setActiveIdx(i => Math.min(i + 1, items.length - 1))
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === 'ArrowUp' && open) {
       e.preventDefault()
       setActiveIdx(i => Math.max(i - 1, -1))
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' && open) {
       e.preventDefault()
       const target = activeIdx >= 0 ? items[activeIdx] : items[0]
       if (target) select(target.Id)
-    } else if (e.key === 'Escape') {
-      setOpen(false)
-      onChange('')
-    } else if (e.key === 'Tab') {
+    } else if (e.key === 'Tab' && open) {
       if (items[0]) { e.preventDefault(); select(items[0].Id) }
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      const now = Date.now()
+      const isDouble = now - lastEscRef.current < 500
+      lastEscRef.current = now
+
+      if (open || query) {
+        // First action: close dropdown + clear query
+        setOpen(false)
+        onChange('')
+      } else if (isDouble && onClear) {
+        // Second Esc with nothing left to clear → clear card selection
+        onClear()
+        lastEscRef.current = 0
+      }
     }
   }
+
+  const showClear = !!(query || hasSelection)
 
   return (
     <div className="relative w-full max-w-2xl mx-auto">
@@ -84,11 +98,12 @@ export function SearchBar({ query, onChange, onSelect, onClear, items }: Props) 
           className="w-full bg-[#111118] border border-[#2a2a40] rounded-md pl-9 pr-9 py-2.5 text-sm text-[#e8e8f0] placeholder-[#444] focus:outline-none focus:border-[#0C5CAB] focus:ring-1 focus:ring-[#0C5CAB] transition-colors"
           spellCheck={false}
         />
-        {query && (
+        {showClear && (
           <button
-            onMouseDown={e => { e.preventDefault(); onClear(); setOpen(false); inputRef.current?.focus() }}
+            onMouseDown={e => { e.preventDefault(); onClear?.(); setOpen(false); inputRef.current?.focus() }}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#444] hover:text-[#888] transition-colors"
             tabIndex={-1}
+            title="Clear (double Esc)"
           >
             <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>

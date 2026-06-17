@@ -10,31 +10,42 @@ import { TYPE_NAMES, TYPE_COLORS, atkColor } from '@/lib/constants'
 interface Props {
   madeFrom: ResultEntry[]
   onSelect: (id: number) => void
+  query?: string
 }
 
-export function MadeFromSection({ madeFrom, onSelect }: Props) {
+export function MadeFromSection({ madeFrom, onSelect, query }: Props) {
   const [typeFilter, setTypeFilter] = useState<number | null>(null)
 
   if (madeFrom.length === 0) return null
 
-  // Unique types across all materials
+  const q = query?.toLowerCase() ?? ''
+
+  const queryFiltered = q
+    ? madeFrom.filter(({ card1, card2 }) =>
+        byId[card1]?.Name.toLowerCase().includes(q) ||
+        byId[card2]?.Name.toLowerCase().includes(q))
+    : madeFrom
+
+  if (queryFiltered.length === 0) return null
+
+  // Unique types across query-filtered materials
   const typeSet = new Set<number>()
-  for (const { card1, card2 } of madeFrom) {
+  for (const { card1, card2 } of queryFiltered) {
     const c1 = byId[card1], c2 = byId[card2]
     if (c1) typeSet.add(c1.Type)
     if (c2) typeSet.add(c2.Type)
   }
 
   const filtered = typeFilter !== null
-    ? madeFrom.filter(({ card1, card2 }) =>
+    ? queryFiltered.filter(({ card1, card2 }) =>
         byId[card1]?.Type === typeFilter || byId[card2]?.Type === typeFilter)
-    : madeFrom
+    : queryFiltered
 
   return (
     <div className="mb-6">
       <h3 className="text-[10px] uppercase tracking-widest text-[#555] mb-2 px-4">
         ✦ Made From
-        <span className="ml-2 text-[#333]">{madeFrom.length}</span>
+        <span className="ml-2 text-[#333]">{queryFiltered.length}</span>
       </h3>
       {typeSet.size > 1 && (
         <div className="flex flex-wrap gap-1 px-4 mb-2">

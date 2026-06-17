@@ -14,6 +14,7 @@ import { MadeFromSection } from './sections/MadeFromSection'
 interface Props {
   cardId: number
   onSelect: (id: number) => void
+  query?: string
 }
 
 function CardImage({ card }: { card: Card }) {
@@ -36,7 +37,7 @@ function CardImage({ card }: { card: Card }) {
   )
 }
 
-export const CardDetail = memo(function CardDetail({ cardId, onSelect }: Props) {
+export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: Props) {
   const card = byId[cardId]
   const relations = useCardRelations(cardId)
 
@@ -47,6 +48,22 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect }: Props) 
   const attrName = ATTR_NAMES[card.Attribute] ?? ''
   const isMonster = card.Type < 20
   const isEquip = card.Type === 23
+
+  const q = query?.toLowerCase() ?? ''
+  const noSectionMatch = q !== '' && (() => {
+    const hasMatch = (name: string) => name.toLowerCase().includes(q)
+    for (const [resultId, partners] of relations.fusesInto) {
+      if (hasMatch(byId[resultId]?.Name ?? '')) return false
+      if (partners.some(pid => hasMatch(byId[pid]?.Name ?? ''))) return false
+    }
+    for (const [pid, rid] of relations.combinesWith) {
+      if (hasMatch(byId[pid]?.Name ?? '') || hasMatch(byId[rid]?.Name ?? '')) return false
+    }
+    if (relations.compatibleSpells.some(id => hasMatch(byId[id]?.Name ?? ''))) return false
+    if (relations.madeFrom.some(({ card1, card2 }) =>
+      hasMatch(byId[card1]?.Name ?? '') || hasMatch(byId[card2]?.Name ?? ''))) return false
+    return true
+  })()
 
   return (
     <div className="border-b border-[#1a1a28] bg-[#09090e]">
@@ -106,14 +123,25 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect }: Props) 
 
       {/* Relationships */}
       <div className="pb-4">
-        <FusesIntoSection fusesInto={relations.fusesInto} onSelect={onSelect} />
-        <CombinesWithSection selfId={cardId} combinesWith={relations.combinesWith} onSelect={onSelect} />
-        <CompatibleSpellsSection
-          compatibleSpells={relations.compatibleSpells}
-          isEquip={isEquip}
-          onSelect={onSelect}
-        />
-        <MadeFromSection madeFrom={relations.madeFrom} onSelect={onSelect} />
+        {noSectionMatch ? (
+          <div className="px-4 py-6 text-center">
+            <span className="text-[11px] text-[#333] bg-[#0e0e14] border border-[#1a1a24] rounded px-3 py-2">
+              No fusions, materials or equips matching &ldquo;{query}&rdquo;
+            </span>
+          </div>
+        ) : (
+          <>
+            <FusesIntoSection fusesInto={relations.fusesInto} onSelect={onSelect} query={query} />
+            <CombinesWithSection selfId={cardId} combinesWith={relations.combinesWith} onSelect={onSelect} query={query} />
+            <CompatibleSpellsSection
+              compatibleSpells={relations.compatibleSpells}
+              isEquip={isEquip}
+              onSelect={onSelect}
+              query={query}
+            />
+            <MadeFromSection madeFrom={relations.madeFrom} onSelect={onSelect} query={query} />
+          </>
+        )}
       </div>
     </div>
   )
