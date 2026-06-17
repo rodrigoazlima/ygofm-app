@@ -1,0 +1,36 @@
+import type { Card } from './types'
+import { THUMB_BASE, FULL_BASE, CODE_FIXES } from './constants'
+import { localImages, fandomImages } from './dataLoader'
+
+function getCode(card: Card): string {
+  let code = card.CardCode || ''
+  if (!code || code === '00000000') code = CODE_FIXES[card.Name] || ''
+  return code
+}
+
+export function thumbUrl(card: Card): string {
+  const k = getCode(card)
+  return k ? `${THUMB_BASE}/${k}.jpg` : ''
+}
+
+export function fullUrl(card: Card): string {
+  const k = getCode(card)
+  return k ? `${FULL_BASE}/${k}.jpg` : ''
+}
+
+export function localUrl(card: Card): string {
+  return localImages[card.Id] || fandomImages[card.Id] || ''
+}
+
+// Returns ordered fallback sources for thumbnails: local WebP first, then CDN
+export function thumbSources(card: Card): string[] {
+  return [localUrl(card), thumbUrl(card)].filter(Boolean)
+}
+
+// Returns ordered fallback sources for large card display
+export function fullSources(card: Card): string[] {
+  const local = localUrl(card)
+  const full = fullUrl(card)
+  const thumb = thumbUrl(card)
+  return [local, full, thumb].filter(Boolean)
+}
