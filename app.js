@@ -227,7 +227,8 @@ function hideTip() {
 
 // ── modal row tooltip ────────────────────────────────────
 const mTip = document.getElementById("m-tip");
-let mTipTimer = null, _expandT = null, _expandPartners = null, _expandRowId = null, _cwTypeFilter = null, _mfTypeFilter = null;
+let mTipTimer = null, _expandT = null, _expandPartners = null, _expandRowId = null;
+let modalFilter, cardSearch;
 const _expandedIds = new Set();
 
 function moveMTip(e) {
@@ -389,245 +390,10 @@ overlay.addEventListener("click", e => { if (e.target === overlay) closeModal();
 
 function closeModal() {
   overlay.classList.remove("open");
-  mFilter.value = "";
   modalCardId = null;
-  _cwTypeFilter = null;
-  _mfTypeFilter = null;
-  applyPartnerFilter("");
+  modalFilter.reset();
 }
 
-function applyPartnerFilter(q) {
-  const lq = q.toLowerCase().trim();
-
-  // Remove previous combined incompat section
-  const oldSec = mBody.querySelector(".incompat-all-sec");
-  if (oldSec) oldSec.remove();
-
-  if (!lq) {
-    for (const row of mBody.querySelectorAll(".row-hidden")) row.classList.remove("row-hidden");
-    for (const sec of mBody.querySelectorAll(".m-section")) sec.style.display = "";
-    updateIncompatiblePanel("", 1);
-    return;
-  }
-
-  let totalMatches = 0;
-  const incompatItems = []; // {kind, card?, m1?, m2?}
-
-  for (const row of mBody.querySelectorAll(".fi-group")) {
-    const matches = (row.dataset.partners||"").includes(lq);
-    row.classList.toggle("row-hidden", !matches);
-    if (matches) { totalMatches++; }
-    else {
-      const card = byId[Number(row.dataset.cardId)];
-      if (card) incompatItems.push({kind:"fi", card});
-    }
-  }
-
-  for (const row of mBody.querySelectorAll(".eq-row")) {
-    const matches = (row.dataset.name||"").includes(lq);
-    row.classList.toggle("row-hidden", !matches);
-    if (matches) { totalMatches++; }
-    else {
-      const card = byId[Number(row.dataset.cardId)];
-      if (card) incompatItems.push({kind:"eq", card});
-    }
-  }
-
-  for (const row of mBody.querySelectorAll(".cw-row")) {
-    const textOk = (row.dataset.partners||"").includes(lq);
-    const typeOk = _cwTypeFilter === null || Number(row.dataset.typeIdx) === _cwTypeFilter;
-    const matches = textOk && typeOk;
-    row.classList.toggle("row-hidden", !matches);
-    if (matches) { totalMatches++; }
-    else {
-      const card = byId[Number(row.dataset.cardId)];
-      if (card) incompatItems.push({kind:"cw", card});
-    }
-  }
-
-  for (const row of mBody.querySelectorAll(".mf-row")) {
-    const textOk = (row.dataset.materials||"").includes(lq);
-    const typeOk = _mfTypeFilter === null ||
-      (row.dataset.types||"").split("|").map(Number).includes(_mfTypeFilter);
-    const matches = textOk && typeOk;
-    row.classList.toggle("row-hidden", !matches);
-    if (matches) { totalMatches++; }
-    else {
-      const m1 = byId[Number(row.dataset.cardId)];
-      const m2 = byId[Number(row.dataset.card2Id)];
-      if (m1 && m2) incompatItems.push({kind:"mf", m1, m2});
-    }
-  }
-
-  // Hide sections whose rows are all hidden
-  for (const sec of mBody.querySelectorAll(".m-section")) {
-    const hasVisible = sec.querySelector(
-      ".fi-group:not(.row-hidden),.cw-row:not(.row-hidden),.mf-row:not(.row-hidden),.eq-row:not(.row-hidden)"
-    );
-    sec.style.display = hasVisible ? "" : "none";
-  }
-
-  // Single combined incompat section at bottom
-  if (incompatItems.length > 0) {
-    const sec = document.createElement("div");
-    sec.className = "m-section incompat-all-sec";
-
-    const title = document.createElement("div");
-    title.className = "m-section-title incompat-all-title";
-    title.textContent = `✕ INCOMPATIBLE (${incompatItems.length})`;
-    sec.appendChild(title);
-
-    for (const item of incompatItems) {
-      const row = document.createElement("div");
-      row.className = "cw-row";
-
-      if (item.kind === "mf") {
-        const t1 = miniThumb(item.m1, "fi-thumb");
-        t1.style.cssText = "width:36px;height:36px;flex-shrink:0";
-        row.appendChild(t1);
-        const n1 = document.createElement("div");
-        n1.className = "mp-name";
-        n1.textContent = item.m1.Name;
-        row.appendChild(n1);
-        const plus = document.createElement("span");
-        plus.className = "plus";
-        plus.textContent = "+";
-        row.appendChild(plus);
-        const t2 = miniThumb(item.m2, "fi-thumb");
-        t2.style.cssText = "width:36px;height:36px;flex-shrink:0";
-        row.appendChild(t2);
-        const n2 = document.createElement("div");
-        n2.className = "mp-name";
-        n2.textContent = item.m2.Name;
-        row.appendChild(n2);
-        row.addEventListener("click", () => openModal(item.m1.Id));
-      } else {
-        const thumb = miniThumb(item.card, "fi-thumb");
-        thumb.style.cssText = "width:36px;height:36px;flex-shrink:0";
-        row.appendChild(thumb);
-        const info = document.createElement("div");
-        info.style.cssText = "flex:1;min-width:0";
-        const name = document.createElement("div");
-        name.className = "mp-name";
-        name.textContent = item.card.Name;
-        const sub = document.createElement("div");
-        sub.className = "mp-type";
-        sub.innerHTML = typeIcon(item.card.Type, 12) + escHtml(cardTypes[item.card.Type]||"") +
-          (item.card.Type < 20 ? " · " + item.card.Attack : "");
-        info.appendChild(name);
-        info.appendChild(sub);
-        row.appendChild(info);
-        row.addEventListener("click", () => openModal(item.card.Id));
-      }
-
-      sec.appendChild(row);
-    }
-
-    mBody.appendChild(sec);
-  }
-
-  updateIncompatiblePanel(lq, totalMatches);
-}
-
-function updateIncompatiblePanel(lq, sectionMatches) {
-  if (!lq) {
-    mIncompatiblePanel.classList.remove("active");
-    mIncompatiblePanel.innerHTML = "";
-    modalEl.classList.remove("has-panel");
-    return;
-  }
-
-  // Build set of all related card IDs (visible in any section)
-  const partnerIds = new Set();
-  if (modalCardId !== null) {
-    if (fusionsList[modalCardId]) {
-      for (const fu of fusionsList[modalCardId]) {
-        partnerIds.add(fu.card);   // fusion partner (material 2)
-        partnerIds.add(fu.result); // fusion result
-      }
-    }
-    if (mat2Idx[modalCardId]) {
-      for (const [mat1Id, resId] of mat2Idx[modalCardId]) {
-        partnerIds.add(mat1Id); // fusion partner (material 1)
-        partnerIds.add(resId);  // fusion result
-      }
-    }
-    const pairs = resultsList[modalCardId] || [];
-    for (const pair of pairs) {
-      partnerIds.add(pair.card1);
-      partnerIds.add(pair.card2);
-    }
-    for (const eid of (monster2Equips[modalCardId] || [])) partnerIds.add(eid);
-    partnerIds.add(modalCardId);
-  }
-
-  // Cards matching query that are NOT related to current card
-  const incompatible = card_db.filter(c => {
-    if (partnerIds.has(c.Id)) return false;
-    const typeName = (cardTypes[c.Type] || "").toLowerCase();
-    return c.Name.toLowerCase().includes(lq) || typeName.includes(lq);
-  }).sort((a, b) => (b.Attack || 0) - (a.Attack || 0)).slice(0, 50);
-
-  if (!incompatible.length) {
-    mIncompatiblePanel.classList.remove("active");
-    mIncompatiblePanel.innerHTML = "";
-    modalEl.classList.remove("has-panel");
-    return;
-  }
-
-  mIncompatiblePanel.innerHTML = "";
-
-  const titleEl = document.createElement("div");
-  titleEl.id = "m-rp-title";
-  titleEl.textContent = "INCOMPATIBLE CARDS (" + incompatible.length + (incompatible.length === 50 ? "+" : "") + ")";
-  mIncompatiblePanel.appendChild(titleEl);
-
-  for (const card of incompatible) {
-    const row = document.createElement("div");
-    row.className = "mp-row";
-
-    const thumb = miniThumb(card, "fi-thumb");
-    thumb.style.cssText = "width:42px;height:42px;flex-shrink:0";
-    row.appendChild(thumb);
-
-    const info = document.createElement("div");
-    info.style.cssText = "flex:1;min-width:0";
-
-    const name = document.createElement("div");
-    name.className = "mp-name";
-    name.textContent = card.Name;
-
-    const type = document.createElement("div");
-    type.className = "mp-type";
-    const typeName = cardTypes[card.Type] || "";
-    const isM = card.Type < 20;
-    type.innerHTML = typeIcon(card.Type, 12) + escHtml(typeName) + (isM ? " · " + card.Attack : "");
-
-    info.appendChild(name);
-    info.appendChild(type);
-    row.appendChild(info);
-
-    row.addEventListener("click", () => openModal(card.Id));
-    mIncompatiblePanel.appendChild(row);
-  }
-
-  mIncompatiblePanel.classList.add("active");
-  modalEl.classList.add("has-panel");
-}
-
-mFilter.addEventListener("input", () => {
-  applyPartnerFilter(mFilter.value.trim());
-});
-
-mFilter.addEventListener("keydown", e => {
-  if (e.key === "Escape") { mFilter.blur(); return; }
-  if (e.key !== "Enter") return;
-  const visible = [...mBody.querySelectorAll(".fi-group:not(.fi-incompat),.cw-row:not(.cw-incompat),.mf-row:not(.mf-incompat)")];
-  if (visible.length === 1 && visible[0].dataset.cardId) {
-    e.preventDefault();
-    openModal(Number(visible[0].dataset.cardId));
-  }
-});
 
 // Global key capture → route printable chars to active search input
 document.addEventListener("keydown", e => {
@@ -635,7 +401,7 @@ document.addEventListener("keydown", e => {
   if (e.key.length !== 1) return;
   const tag = document.activeElement && document.activeElement.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA") return;
-  const target = overlay.classList.contains("open") ? mFilter : searchInput;
+  const target = overlay.classList.contains("open") ? modalFilter.filterEl : cardSearch.inputEl;
   target.focus();
   target.value += e.key;
   target.dispatchEvent(new Event("input"));
@@ -646,11 +412,9 @@ function openModal(cardId) {
   const c = byId[cardId];
   if (!c) return;
 
-  mFilter.value = "";
   modalCardId = cardId;
-  _cwTypeFilter = null;
-  _mfTypeFilter = null;
-  updateIncompatiblePanel("");
+  modalFilter.setCard(cardId);
+  modalFilter.apply("");
 
   // header
   const src = fullUrl(c), local = localUrl(c);
@@ -836,12 +600,10 @@ function makeCombinesWithSection(c) {
     chip.style.cssText = `color:${color};background:${color}22;border:1px solid ${color}55`;
     chip.innerHTML = typeIcon(Number(tidx), 13) + escHtml(t) + " " + count;
     chip.addEventListener("click", () => {
-      const ti = Number(tidx);
-      _cwTypeFilter = (_cwTypeFilter === ti) ? null : ti;
+      modalFilter.toggleTypeFilter("cw", Number(tidx));
       for (const ch of typesBar.querySelectorAll(".cw-type-chip")) {
-        ch.classList.toggle("dimmed", _cwTypeFilter !== null && Number(ch.dataset.typeIdx) !== _cwTypeFilter);
+        ch.classList.toggle("dimmed", modalFilter.getCwTypeFilter() !== null && Number(ch.dataset.typeIdx) !== modalFilter.getCwTypeFilter());
       }
-      applyPartnerFilter(mFilter.value.trim());
     });
     typesBar.appendChild(chip);
   }
@@ -1008,12 +770,10 @@ function makeMadeFromSection(c) {
     chip.style.cssText = `color:${color};background:${color}22;border:1px solid ${color}55`;
     chip.innerHTML = typeIcon(Number(tidx), 13) + escHtml(t) + " " + count;
     chip.addEventListener("click", () => {
-      const ti = Number(tidx);
-      _mfTypeFilter = (_mfTypeFilter === ti) ? null : ti;
+      modalFilter.toggleTypeFilter("mf", Number(tidx));
       for (const ch of mfTypesBar.querySelectorAll(".cw-type-chip")) {
-        ch.classList.toggle("dimmed", _mfTypeFilter !== null && Number(ch.dataset.typeIdx) !== _mfTypeFilter);
+        ch.classList.toggle("dimmed", modalFilter.getMfTypeFilter() !== null && Number(ch.dataset.typeIdx) !== modalFilter.getMfTypeFilter());
       }
-      applyPartnerFilter(mFilter.value.trim());
     });
     mfTypesBar.appendChild(chip);
   }
@@ -1063,106 +823,9 @@ function makeMadeFromSection(c) {
   return sec;
 }
 
-// ── card search (all 722 cards) ───────────────────────────
+// ── card search (all 722 cards) — managed by CardSearch class ─
 const searchInput = document.getElementById("card-search");
 const searchDrop  = document.getElementById("search-drop");
-let dropActive = -1, dropItems = [], dropFiltered = [];
-
-function initSearch() {
-  const allNames = card_db.map(c => ({id: c.Id, name: c.Name}));
-
-  searchInput.addEventListener("input", () => {
-    const q = searchInput.value.trim().toLowerCase();
-    buildGrid(q);
-    if (!q) { closeDrop(); return; }
-    dropFiltered = allNames.filter(n => n.name.toLowerCase().includes(q)).slice(0, 20);
-    if (dropFiltered.length === 1) { selectCard(dropFiltered[0].id); return; }
-    renderDrop(dropFiltered);
-  });
-
-  searchInput.addEventListener("keydown", e => {
-    if (e.key === "Tab" && dropItems.length > 0) {
-      e.preventDefault();
-      const item = dropItems[dropActive] || dropItems[0];
-      if (item) {
-        const card = byId[Number(item.dataset.id)];
-        if (card) { searchInput.value = card.Name; searchInput.dispatchEvent(new Event("input")); }
-      }
-      return;
-    }
-    if (!searchDrop.classList.contains("open")) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive(dropActive + 1); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(dropActive - 1); }
-    else if (e.key === "Enter") {
-      e.preventDefault();
-      const item = dropItems[dropActive] || dropItems[0];
-      if (item) selectCard(Number(item.dataset.id));
-    }
-    else if (e.key === "Escape") { closeDrop(); searchInput.blur(); }
-  });
-
-  searchInput.addEventListener("blur", () => {
-    setTimeout(closeDrop, 150);
-  });
-}
-
-function renderDrop(matches) {
-  searchDrop.innerHTML = "";
-  dropItems = [];
-  dropActive = -1;
-  if (!matches.length) { closeDrop(); return; }
-
-  for (const m of matches) {
-    const div = document.createElement("div");
-    div.className = "sdrop-item";
-    div.dataset.id = m.id;
-
-    const card = byId[m.id];
-    if (card) {
-      div.appendChild(miniThumb(card, "sdrop-thumb"));
-      const info = document.createElement("div");
-      info.className = "sdrop-info";
-      const nameEl = document.createElement("div");
-      nameEl.className = "sdrop-name";
-      nameEl.textContent = m.name;
-      const sub = document.createElement("div");
-      sub.className = "sdrop-sub";
-      const isM = card.Type < 20;
-      sub.innerHTML = typeIcon(card.Type, 11) + escHtml(cardTypes[card.Type] || "") + (isM ? " · " + card.Attack : "");
-      info.appendChild(nameEl);
-      info.appendChild(sub);
-      div.appendChild(info);
-    } else {
-      div.textContent = m.name;
-    }
-
-    div.addEventListener("mousedown", e => { e.preventDefault(); selectCard(m.id); });
-    searchDrop.appendChild(div);
-    dropItems.push(div);
-  }
-  searchDrop.classList.add("open");
-}
-
-function setActive(idx) {
-  dropActive = Math.max(-1, Math.min(dropItems.length - 1, idx));
-  dropItems.forEach((el,i) => el.classList.toggle("active", i === dropActive));
-  if (dropActive >= 0) dropItems[dropActive].scrollIntoView({block:"nearest"});
-}
-
-function selectCard(id) {
-  closeDrop();
-  searchInput.value = "";
-  buildGrid();
-  openModal(id);
-  setTimeout(() => mFilter.focus(), 50);
-}
-
-function closeDrop() {
-  searchDrop.classList.remove("open");
-  searchDrop.innerHTML = "";
-  dropItems = [];
-  dropActive = -1;
-}
 
 // ── prefetch ─────────────────────────────────────────────
 const _pfSeen = new Set();
@@ -1171,15 +834,6 @@ function _pfCard(c) { if (!c) return; _pf(thumbUrl(c)); _pf(fullUrl(c)); _pf(loc
 function _pfCards(arr, max) { const n = Math.min(arr.length, max||60); for (let i=0;i<n;i++) _pfCard(arr[i]); }
 
 let _pfT = null;
-
-searchInput.addEventListener("input", () => {
-  clearTimeout(_pfT);
-  _pfT = setTimeout(() => {
-    const lq = searchInput.value.trim().toLowerCase();
-    if (!lq) return;
-    _pfCards(card_db.filter(c => c.Name.toLowerCase().includes(lq)));
-  }, 80);
-});
 
 mFilter.addEventListener("input", () => {
   clearTimeout(_pfT);
@@ -1230,9 +884,47 @@ function escHtml(s) {
 
 // ── init ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  // scripts loaded synchronously before this runs
   buildIndices();
   document.getElementById("loading").remove();
   buildGrid();
-  initSearch();
+
+  const helpers = { miniThumb, typeIcon, escHtml, cardTypes, atkColor };
+
+  cardSearch = new CardSearch({
+    inputEl:  searchInput,
+    dropEl:   searchDrop,
+    cards:    card_db,
+    byId,
+    helpers,
+    onFilter: q => buildGrid(q),
+    onSelect: id => {
+      buildGrid();
+      openModal(id);
+      setTimeout(() => modalFilter.filterEl.focus(), 50);
+    },
+    onInput: q => {
+      clearTimeout(_pfT);
+      _pfT = setTimeout(() => {
+        if (!q) return;
+        _pfCards(card_db.filter(c => c.Name.toLowerCase().includes(q)));
+      }, 80);
+    },
+  });
+
+  modalFilter = new ModalFilter({
+    filterEl:         mFilter,
+    bodyEl:           mBody,
+    panelEl:          mIncompatiblePanel,
+    modalEl,
+    cards:            card_db,
+    byId,
+    fusionsList,
+    mat2Idx,
+    resultsList,
+    monster2Equips,
+    FIELD_BOOSTS,
+    cardTypes,
+    helpers,
+    onOpenCard: id => openModal(id),
+  });
 });

@@ -1,0 +1,12 @@
+{
+  "name": "ygofm-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test --config=tests/playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "serve": "^14.0.0"
+  }
+}
