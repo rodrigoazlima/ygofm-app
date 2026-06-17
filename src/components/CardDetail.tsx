@@ -115,7 +115,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, query }: 
             </>
           )}
 
-          <p className="text-[11px] text-[#666] leading-relaxed whitespace-pre-line mt-2">
+          <p className="text-[9px] text-[#666] leading-relaxed whitespace-pre-line mt-2">
             {card.Description.replace(/\r\n/g, '\n')}
           </p>
         </div>
