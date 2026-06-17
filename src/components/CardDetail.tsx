@@ -16,6 +16,7 @@ interface Props {
   cardId: number
   onSelect: (id: number) => void
   onSelectNpc?: (npcId: number) => void
+  onSelectType?: (typeIdx: number) => void
   query?: string
 }
 
@@ -39,7 +40,7 @@ function CardImage({ card }: { card: Card }) {
   )
 }
 
-export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, query }: Props) {
+export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, onSelectType, query }: Props) {
   const card = byId[cardId]
   const relations = useCardRelations(cardId)
 
@@ -112,8 +113,15 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
 
           <div className="flex items-center gap-2 mb-2">
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded-sm border"
-              style={{ borderColor: typeColor, color: typeColor }}
+              onClick={() => onSelectType?.(card.Type)}
+              className="text-[10px] px-1.5 py-0.5 rounded-sm border transition-opacity"
+              style={{
+                borderColor: typeColor,
+                color: typeColor,
+                cursor: onSelectType ? 'pointer' : undefined,
+                opacity: onSelectType ? undefined : 1,
+              }}
+              title={onSelectType ? `View all ${typeName}` : undefined}
             >
               {typeName}
             </span>

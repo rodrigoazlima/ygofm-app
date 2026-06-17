@@ -246,7 +246,7 @@ export function SearchPage() {
       <main className="flex-1 overflow-y-auto">
         {selectedId !== null && (
           <div key={`card-${selectedId}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
-            <CardDetail cardId={selectedId} onSelect={handleSelect} onSelectNpc={handleSelectNpc} query={query} />
+            <CardDetail cardId={selectedId} onSelect={handleSelect} onSelectNpc={handleSelectNpc} onSelectType={handleSelectType} query={query} />
           </div>
         )}
         {selectedNpcId !== null && (
