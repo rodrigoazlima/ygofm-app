@@ -21,6 +21,7 @@ interface Props {
   tableSortDir?: 'asc' | 'desc'
   onTableSortChange?: (field: TableCol, dir: 'asc' | 'desc') => void
   getCardHref?: (id: number) => string
+  showMonsterStats?: boolean
 }
 
 function GridIcon() {
@@ -44,7 +45,7 @@ function ListIcon() {
   )
 }
 
-const COLS: { key: TableCol; label: string; align: 'left' | 'right' | 'center' }[] = [
+const COLS_MONSTER: { key: TableCol; label: string; align: 'left' | 'right' | 'center' }[] = [
   { key: 'Name',      label: 'Name',  align: 'left'   },
   { key: 'Type',      label: 'Type',  align: 'center' },
   { key: 'Attribute', label: 'Elem',  align: 'center' },
@@ -54,11 +55,20 @@ const COLS: { key: TableCol; label: string; align: 'left' | 'right' | 'center' }
   { key: 'Stars',     label: 'Stars', align: 'right'  },
 ]
 
-const COL_WIDTHS = '28px 1fr 22px 22px 48px 40px 36px 42px'
+const COLS_SPELL: { key: TableCol; label: string; align: 'left' | 'right' | 'center' }[] = [
+  { key: 'Name',      label: 'Name',  align: 'left'   },
+  { key: 'Type',      label: 'Type',  align: 'center' },
+  { key: 'Stars',     label: 'Stars', align: 'right'  },
+]
 
-export function CardListView({ cards: items, sortKey, accentColor, onSelect, viewMode: viewModeProp, onViewModeChange, tableSortField: tableSortFieldProp, tableSortDir: tableSortDirProp, onTableSortChange, getCardHref }: Props) {
+const COL_WIDTHS_MONSTER = '28px 1fr 22px 22px 48px 40px 36px 42px'
+const COL_WIDTHS_SPELL   = '28px 1fr 22px 42px'
+
+export function CardListView({ cards: items, sortKey, accentColor, onSelect, viewMode: viewModeProp, onViewModeChange, tableSortField: tableSortFieldProp, tableSortDir: tableSortDirProp, onTableSortChange, getCardHref, showMonsterStats = true }: Props) {
   const [localTableCol, setLocalTableCol] = useState<TableCol>('Attack')
   const [localTableDir, setLocalTableDir] = useState<'asc' | 'desc'>('desc')
+  const COLS = showMonsterStats ? COLS_MONSTER : COLS_SPELL
+  const COL_WIDTHS = showMonsterStats ? COL_WIDTHS_MONSTER : COL_WIDTHS_SPELL
   const tip = useTooltip()
   const tipShow = useCallback((card: Card, e: React.MouseEvent) => {
     tip?.show({ kind: 'card', card }, { x: e.clientX, y: e.clientY })
@@ -210,7 +220,6 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
           </div>
 
           {tableItems.map(card => {
-            const isMonster = card.Type < 20
             const typeName = TYPE_NAMES[card.Type] || ''
             const typeImg = TYPE_IMAGES[card.Type]
             const attrName = ATTR_NAMES[card.Attribute] || ''
@@ -232,18 +241,26 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
                       style={{ width: 12, height: 12, objectFit: 'contain' }} />
                   )}
                 </span>
-                <span className="flex justify-center">
-                  {attrImg && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={attrImg} alt={attrName} title={attrName} width={12} height={12}
-                      style={{ width: 12, height: 12, objectFit: 'contain' }} />
-                  )}
-                </span>
-                <span className="text-[10px] font-mono text-right pr-1" style={{ color: isMonster ? atkColor(card.Attack) : '#2a2a3a' }}>
-                  {isMonster ? card.Attack : '—'}
-                </span>
-                <span className="text-[10px] font-mono text-[#555] text-right pr-1">{isMonster ? card.Defense : '—'}</span>
-                <span className="text-[10px] font-mono text-[#444] text-right pr-1">{isMonster ? card.Level : '—'}</span>
+                {showMonsterStats && (
+                  <span className="flex justify-center">
+                    {attrImg && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={attrImg} alt={attrName} title={attrName} width={12} height={12}
+                        style={{ width: 12, height: 12, objectFit: 'contain' }} />
+                    )}
+                  </span>
+                )}
+                {showMonsterStats && (
+                  <span className="text-[10px] font-mono text-right pr-1" style={{ color: atkColor(card.Attack) }}>
+                    {card.Attack}
+                  </span>
+                )}
+                {showMonsterStats && (
+                  <span className="text-[10px] font-mono text-[#555] text-right pr-1">{card.Defense}</span>
+                )}
+                {showMonsterStats && (
+                  <span className="text-[10px] font-mono text-[#444] text-right pr-1">{card.Level}</span>
+                )}
                 <span className="text-[10px] font-mono text-[#444] text-right pr-1">{card.Stars}</span>
               </>
             )

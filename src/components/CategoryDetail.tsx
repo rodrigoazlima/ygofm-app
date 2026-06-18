@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo, useState, useEffect } from 'react'
+import { memo, useMemo, useState, useEffect, useRef } from 'react'
 import { cards } from '@/lib/dataLoader'
 import { FIELD_BOOSTS, TYPE_NAMES, TYPE_IMAGES, TYPE_COLORS, ATTR_NAMES, ATTR_IMAGES, ATTR_COLORS } from '@/lib/constants'
 import { CardListView } from './CardListView'
@@ -50,8 +50,13 @@ export const CategoryDetail = memo(function CategoryDetail({ category, filters, 
   const meta = META[category]
   const isMonster = category === 'monster'
   const [sortKey, setSortKey] = useState(0)
+  const [nameQuery, setNameQuery] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
-  const { sortField, sortDir, viewMode, minAtk, minDef, filterType, filterAttr, minStars, maxStars } = filters
+  const { sortField, sortDir, viewMode, minAtk, minDef, filterType, filterAttr, minStars, maxStars, tableSortField, tableSortDir } = filters
+  const MONSTER_ONLY_FIELDS = new Set(['Attack', 'Defense', 'Level', 'Type', 'Attribute'])
+  const effectiveTableSortField = (!isMonster && MONSTER_ONLY_FIELDS.has(tableSortField)) ? 'Stars' : tableSortField
+  const effectiveTableSortDir = effectiveTableSortField !== tableSortField ? 'desc' : tableSortDir
 
   useEffect(() => {
     setSortKey(k => k + 1)
@@ -78,11 +83,15 @@ export const CategoryDetail = memo(function CategoryDetail({ category, filters, 
       if (minStars > 0) result = result.filter(c => c.Stars >= minStars)
       if (maxStars < 999) result = result.filter(c => c.Stars <= maxStars)
     }
+    if (nameQuery) {
+      const q = nameQuery.toLowerCase()
+      result = result.filter(c => c.Name.toLowerCase().includes(q))
+    }
     return result
-  }, [base, minAtk, isMonster, filterType, filterAttr, minDef, minStars, maxStars])
+  }, [base, minAtk, isMonster, filterType, filterAttr, minDef, minStars, maxStars, nameQuery])
 
   const hasFilter = minAtk > 0 || (filterType !== null && filterType.length > 0) || filterAttr !== null ||
-    minDef > 0 || minStars > 0 || maxStars < 999
+    minDef > 0 || minStars > 0 || maxStars < 999 || !!nameQuery
 
   function pill(active: boolean, onClick: () => void, children: React.ReactNode) {
     return (
@@ -111,7 +120,7 @@ export const CategoryDetail = memo(function CategoryDetail({ category, filters, 
           </div>
         </div>
         <div className="flex gap-1 flex-wrap justify-end">
-          {SORT_FIELDS.map(({ key, label }) => {
+          {SORT_FIELDS.filter(({ key }) => isMonster || key === 'Stars').map(({ key, label }) => {
             const active = sortField === key
             const disabled = viewMode === 'table'
             return (
@@ -138,11 +147,34 @@ export const CategoryDetail = memo(function CategoryDetail({ category, filters, 
         </div>
       </div>
 
-      {/* Min ATK */}
-      <FilterRow label="Min ATK">
-        {ATK_FILTERS.map(val => pill(minAtk === val, () => onFilterChange({ minAtk: val }),
-          val === 0 ? 'All' : `${val}+`))}
-      </FilterRow>
+      {/* Name search */}
+      <div className="flex items-center gap-1 px-4 py-1.5 border-b border-[#0f0f1a]">
+        <span className="text-[8px] uppercase tracking-widest text-[#333] mr-1 shrink-0 w-14">Search</span>
+        <input
+          ref={nameInputRef}
+          type="text"
+          value={nameQuery}
+          onChange={e => setNameQuery(e.target.value)}
+          placeholder="card name…"
+          className="flex-1 bg-transparent border border-[#1a1a28] rounded-sm px-1.5 py-0.5 text-[9px] text-[#888] placeholder:text-[#2a2a3a] outline-none focus:border-[#2a2a3a] transition-colors font-mono"
+        />
+        {nameQuery && (
+          <button
+            onClick={() => { setNameQuery(''); nameInputRef.current?.focus() }}
+            className="text-[9px] text-[#333] hover:text-[#555] transition-colors px-1"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* ATK filter — monsters only */}
+      {isMonster && (
+        <FilterRow label="Min ATK">
+          {ATK_FILTERS.map(val => pill(minAtk === val, () => onFilterChange({ minAtk: val }),
+            val === 0 ? 'All' : `${val}+`))}
+        </FilterRow>
+      )}
 
       {/* Monster-only filters */}
       {isMonster && (
@@ -237,10 +269,11 @@ export const CategoryDetail = memo(function CategoryDetail({ category, filters, 
         onSelect={onSelect}
         viewMode={viewMode}
         onViewModeChange={mode => onFilterChange({ viewMode: mode })}
-        tableSortField={filters.tableSortField}
-        tableSortDir={filters.tableSortDir}
+        tableSortField={effectiveTableSortField}
+        tableSortDir={effectiveTableSortDir}
         onTableSortChange={(field, dir) => onFilterChange({ tableSortField: field, tableSortDir: dir })}
         getCardHref={getCardHref}
+        showMonsterStats={isMonster}
       />
     </div>
   )
