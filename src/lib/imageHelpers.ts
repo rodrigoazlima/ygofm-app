@@ -25,9 +25,15 @@ export function localUrl(card: Card): string {
   return path ? `${BASE_PATH}${path}` : ''
 }
 
-// Returns ordered fallback sources for thumbnails: local WebP first, then CDN
+// Returns the pre-generated 48×48 thumbnail, if a local image exists for this card
+export function localThumbUrl(card: Card): string {
+  if (!localUrl(card)) return ''
+  return `${BASE_PATH}/images/thumbs/${card.Id}.jpg`
+}
+
+// Returns ordered fallback sources for thumbnails: local thumb → local full → CDN
 export function thumbSources(card: Card): string[] {
-  return [localUrl(card), thumbUrl(card)].filter(Boolean)
+  return [localThumbUrl(card), localUrl(card), thumbUrl(card)].filter(Boolean)
 }
 
 // Returns ordered fallback sources for large card display

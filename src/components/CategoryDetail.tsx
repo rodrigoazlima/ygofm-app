@@ -43,9 +43,10 @@ interface Props {
   filters: FilterState
   onFilterChange: (partial: Partial<FilterState>) => void
   onSelect: (cardId: number) => void
+  getCardHref?: (id: number) => string
 }
 
-export const CategoryDetail = memo(function CategoryDetail({ category, filters, onFilterChange, onSelect }: Props) {
+export const CategoryDetail = memo(function CategoryDetail({ category, filters, onFilterChange, onSelect, getCardHref }: Props) {
   const meta = META[category]
   const isMonster = category === 'monster'
   const [sortKey, setSortKey] = useState(0)
@@ -236,6 +237,10 @@ export const CategoryDetail = memo(function CategoryDetail({ category, filters, 
         onSelect={onSelect}
         viewMode={viewMode}
         onViewModeChange={mode => onFilterChange({ viewMode: mode })}
+        tableSortField={filters.tableSortField}
+        tableSortDir={filters.tableSortDir}
+        onTableSortChange={(field, dir) => onFilterChange({ tableSortField: field, tableSortDir: dir })}
+        getCardHref={getCardHref}
       />
     </div>
   )

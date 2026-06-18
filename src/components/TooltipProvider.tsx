@@ -116,6 +116,17 @@ function CardTip({ card, pos }: { card: Card; pos: Pos }) {
             {card.Description}
           </div>
         )}
+
+        <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-[#111120]">
+          <span className="text-[8px] font-mono text-[#2a2a3a] tracking-wider">
+            {card.CardCode || '—'}
+          </span>
+          {card.Stars > 0 && (
+            <span className="text-[8px] font-mono text-[#2a2a3a]">
+              ★{card.Stars}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

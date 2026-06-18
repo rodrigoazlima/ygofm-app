@@ -1,4 +1,5 @@
 export type SortField = 'Attack' | 'Defense' | 'Level' | 'Stars'
+export type TableSortField = 'Name' | 'Attack' | 'Defense' | 'Level' | 'Stars' | 'Type' | 'Attribute'
 export type SortDir = 'asc' | 'desc'
 export type ViewMode = 'grid' | 'table'
 
@@ -12,15 +13,19 @@ export interface FilterState {
   filterAttr: number | null
   minStars: number
   maxStars: number
+  tableSortField: TableSortField
+  tableSortDir: SortDir
 }
 
 export const DEFAULT_FILTERS: FilterState = {
   sortField: 'Attack', sortDir: 'desc', viewMode: 'grid',
   minAtk: 0, minDef: 0, filterType: null, filterAttr: null,
   minStars: 0, maxStars: 999,
+  tableSortField: 'Attack', tableSortDir: 'desc',
 }
 
 const VALID_FIELDS: SortField[] = ['Attack', 'Defense', 'Level', 'Stars']
+const VALID_TABLE_FIELDS: TableSortField[] = ['Name', 'Attack', 'Defense', 'Level', 'Stars', 'Type', 'Attribute']
 
 export function parseFilters(
   get: (k: string) => string | null,
@@ -29,6 +34,8 @@ export function parseFilters(
 ): FilterState {
   const sortRaw = get('sort') || ''
   const [sf, sd] = sortRaw.split(':')
+  const tSortRaw = get('tSort') || ''
+  const [tsf, tsd] = tSortRaw.split(':')
   const fTypeRaw = getAll('fType').map(Number).filter(n => !isNaN(n))
   return {
     sortField: VALID_FIELDS.includes(sf as SortField) ? (sf as SortField) : 'Attack',
@@ -40,6 +47,8 @@ export function parseFilters(
     filterAttr: has('fAttr') ? Number(get('fAttr')) : null,
     minStars: Math.max(0, Number(get('minStar')) || 0),
     maxStars: has('maxStar') ? Math.max(0, Number(get('maxStar'))) : 999,
+    tableSortField: VALID_TABLE_FIELDS.includes(tsf as TableSortField) ? (tsf as TableSortField) : 'Attack',
+    tableSortDir: tsd === 'asc' ? 'asc' : 'desc',
   }
 }
 
@@ -57,5 +66,7 @@ export function applyFilters(base: URLSearchParams, f: FilterState): URLSearchPa
   if (f.filterAttr !== null) p.set('fAttr', String(f.filterAttr)); else p.delete('fAttr')
   if (f.minStars > 0) p.set('minStar', String(f.minStars)); else p.delete('minStar')
   if (f.maxStars < 999) p.set('maxStar', String(f.maxStars)); else p.delete('maxStar')
+  if (f.tableSortField === 'Attack' && f.tableSortDir === 'desc') p.delete('tSort')
+  else p.set('tSort', `${f.tableSortField}:${f.tableSortDir}`)
   return p
 }

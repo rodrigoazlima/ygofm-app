@@ -16,6 +16,10 @@ interface Props {
   onSelect: (cardId: number) => void
   viewMode?: ViewMode
   onViewModeChange?: (mode: ViewMode) => void
+  tableSortField?: TableCol
+  tableSortDir?: 'asc' | 'desc'
+  onTableSortChange?: (field: TableCol, dir: 'asc' | 'desc') => void
+  getCardHref?: (id: number) => string
 }
 
 function GridIcon() {
@@ -51,9 +55,11 @@ const COLS: { key: TableCol; label: string; align: 'left' | 'right' | 'center' }
 
 const COL_WIDTHS = '28px 1fr 22px 22px 48px 40px 36px 42px'
 
-export function CardListView({ cards: items, sortKey, accentColor, onSelect, viewMode: viewModeProp, onViewModeChange }: Props) {
-  const [tableCol, setTableCol] = useState<TableCol>('Attack')
-  const [tableDir, setTableDir] = useState<'asc' | 'desc'>('desc')
+export function CardListView({ cards: items, sortKey, accentColor, onSelect, viewMode: viewModeProp, onViewModeChange, tableSortField: tableSortFieldProp, tableSortDir: tableSortDirProp, onTableSortChange, getCardHref }: Props) {
+  const [localTableCol, setLocalTableCol] = useState<TableCol>('Attack')
+  const [localTableDir, setLocalTableDir] = useState<'asc' | 'desc'>('desc')
+  const tableCol = tableSortFieldProp ?? localTableCol
+  const tableDir = tableSortDirProp ?? localTableDir
   const viewMode = viewModeProp ?? 'grid'
 
   function switchView(mode: ViewMode) {
@@ -61,11 +67,14 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
   }
 
   function handleColClick(col: TableCol) {
-    if (col === tableCol) {
-      setTableDir(d => d === 'desc' ? 'asc' : 'desc')
+    const newDir = col === tableCol
+      ? (tableDir === 'desc' ? 'asc' : 'desc')
+      : (col === 'Name' ? 'asc' : 'desc')
+    if (onTableSortChange) {
+      onTableSortChange(col, newDir)
     } else {
-      setTableCol(col)
-      setTableDir(col === 'Name' ? 'asc' : 'desc')
+      setLocalTableCol(col)
+      setLocalTableDir(newDir)
     }
   }
 
@@ -119,12 +128,9 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
           className="sort-enter px-4 mt-2"
           style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(86px, 1fr))', gap: 4 }}
         >
-          {items.map(card => (
-            <div
-              key={card.Id}
-              className="bg-[#0d0d18] border border-[#1a1a28] rounded-sm hover:border-[#252535] transition-colors cursor-pointer"
-              onClick={() => onSelect(card.Id)}
-            >
+          {items.map(card => {
+            const href = getCardHref?.(card.Id)
+            const inner = (
               <div className="flex flex-col items-center px-0.5 pt-1 pb-0.5">
                 <CardThumb card={card} size={52} />
                 <div className="text-[8px] text-[#777] text-center leading-none w-full truncate mt-0.5 px-0.5">
@@ -136,8 +142,26 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
                   <span className="text-[#444]">{card.Defense}</span>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+            return href ? (
+              <a
+                key={card.Id}
+                href={href}
+                onClick={e => { e.preventDefault(); onSelect(card.Id) }}
+                className="bg-[#0d0d18] border border-[#1a1a28] rounded-sm hover:border-[#252535] transition-colors cursor-pointer"
+              >
+                {inner}
+              </a>
+            ) : (
+              <div
+                key={card.Id}
+                className="bg-[#0d0d18] border border-[#1a1a28] rounded-sm hover:border-[#252535] transition-colors cursor-pointer"
+                onClick={() => onSelect(card.Id)}
+              >
+                {inner}
+              </div>
+            )
+          })}
         </div>
       ) : (
         <div className="sort-enter px-4 mt-2">
@@ -173,13 +197,9 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
             const typeImg = TYPE_IMAGES[card.Type]
             const attrName = ATTR_NAMES[card.Attribute] || ''
             const attrImg = ATTR_IMAGES[card.Attribute]
-            return (
-              <div
-                key={card.Id}
-                className="grid items-center py-0.5 border-b border-[#0f0f18] hover:bg-[#0d0d18] transition-colors cursor-pointer rounded-sm"
-                style={{ gridTemplateColumns: COL_WIDTHS }}
-                onClick={() => onSelect(card.Id)}
-              >
+            const href = getCardHref?.(card.Id)
+            const rowContent = (
+              <>
                 <CardThumb card={card} size={24} />
                 <span className="text-[10px] text-[#aaa] truncate pr-1">{card.Name}</span>
                 <span className="flex justify-center">
@@ -202,6 +222,27 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
                 <span className="text-[10px] font-mono text-[#555] text-right pr-1">{card.Defense}</span>
                 <span className="text-[10px] font-mono text-[#444] text-right pr-1">{card.Level}</span>
                 <span className="text-[10px] font-mono text-[#444] text-right pr-1">{card.Stars}</span>
+              </>
+            )
+            const rowClass = 'grid items-center py-0.5 border-b border-[#0f0f18] hover:bg-[#0d0d18] transition-colors cursor-pointer rounded-sm'
+            return href ? (
+              <a
+                key={card.Id}
+                href={href}
+                onClick={e => { e.preventDefault(); onSelect(card.Id) }}
+                className={rowClass}
+                style={{ gridTemplateColumns: COL_WIDTHS }}
+              >
+                {rowContent}
+              </a>
+            ) : (
+              <div
+                key={card.Id}
+                className={rowClass}
+                style={{ gridTemplateColumns: COL_WIDTHS }}
+                onClick={() => onSelect(card.Id)}
+              >
+                {rowContent}
               </div>
             )
           })}

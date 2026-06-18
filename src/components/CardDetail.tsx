@@ -18,6 +18,7 @@ interface Props {
   onSelectNpc?: (npcId: number) => void
   onSelectType?: (typeIdx: number) => void
   onSelectAttr?: (attrIdx: number) => void
+  onSelectCategory?: (cat: 'monster' | 'field') => void
   query?: string
 }
 
@@ -41,7 +42,7 @@ function CardImage({ card }: { card: Card }) {
   )
 }
 
-export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, onSelectType, onSelectAttr, query }: Props) {
+export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectNpc, onSelectType, onSelectAttr, onSelectCategory, query }: Props) {
   const card = byId[cardId]
   const relations = useCardRelations(cardId)
 
@@ -102,7 +103,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-bold text-[#f0e8c0] leading-tight mb-2">{card.Name}</h2>
 
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
             <span
               onClick={() => onSelectType?.(card.Type)}
               className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm border transition-opacity"
@@ -137,6 +138,20 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
                     style={{ width: 11, height: 11, objectFit: 'contain' }} />
                 )}
                 {attrName}
+              </span>
+            )}
+            {isMonster && (
+              <span
+                onClick={() => onSelectCategory?.('monster')}
+                className="text-[10px] px-1.5 py-0.5 rounded-sm border transition-opacity"
+                style={{
+                  borderColor: '#997733',
+                  color: '#997733',
+                  cursor: onSelectCategory ? 'pointer' : undefined,
+                }}
+                title={onSelectCategory ? 'View all monsters' : undefined}
+              >
+                Normal Monster
               </span>
             )}
           </div>

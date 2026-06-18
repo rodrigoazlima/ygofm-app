@@ -283,6 +283,13 @@ export function SearchPage() {
     router.push(`${pathname}?${params}`, { scroll: false })
   }, [pathname, router, game])
 
+  const getCardHref = useCallback((id: number) => {
+    const p = new URLSearchParams()
+    p.set('card', String(id))
+    if (game !== DEFAULT_GAME) p.set('game', game)
+    return `${pathname}?${p}`
+  }, [game, pathname])
+
   const handleSelectCategory = useCallback((cat: CategoryId) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
@@ -357,7 +364,8 @@ export function SearchPage() {
           <div key={`card-${selectedId}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
             <CardDetail cardId={selectedId} onSelect={handleSelect}
               onSelectNpc={handleSelectNpc} onSelectType={handleSelectType}
-              onSelectAttr={handleSelectAttr} query={query} />
+              onSelectAttr={handleSelectAttr} onSelectCategory={handleSelectCategory}
+              query={query} />
           </div>
         )}
         {selectedNpcId !== null && (
@@ -377,6 +385,7 @@ export function SearchPage() {
               filters={filterState}
               onFilterChange={handleFilterChange}
               onSelect={handleSelect}
+              getCardHref={getCardHref}
             />
           </div>
         )}
