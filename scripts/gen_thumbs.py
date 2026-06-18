@@ -22,7 +22,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 IMAGES_DIR = ROOT / "public" / "images"
-THUMBS_DIR = IMAGES_DIR / "thumbs"
+THUMBS_DIR = IMAGES_DIR / "fm" / "thumbs"
 LOCAL_IMAGES_JSON = ROOT / "src" / "data" / "localImages.json"
 
 SIZE = 48
