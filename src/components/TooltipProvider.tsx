@@ -6,7 +6,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import type { Card } from '@/lib/types'
-import { thumbSources } from '@/lib/imageHelpers'
+import { fullSources } from '@/lib/imageHelpers'
 import {
   TYPE_NAMES, ATTR_NAMES, TYPE_COLORS, ATTR_COLORS,
   TYPE_IMAGES, ATTR_IMAGES, STAR_NAMES, atkColor,
@@ -31,11 +31,15 @@ export function useTooltip() {
 }
 
 const DELAY_MS = 400
-const TIP_W = 172
+const CARD_IMG_W = 156
+const CARD_IMG_H = 228 // ~2:3 YGO card ratio
+const DETAILS_W = 168
+const TIP_TOTAL_W = CARD_IMG_W + DETAILS_W
+const OFFSET = 16
 
 function CardTip({ card, pos }: { card: Card; pos: Pos }) {
   const [srcIdx, setSrcIdx] = useState(0)
-  const sources = thumbSources(card)
+  const sources = fullSources(card)
   const typeName = TYPE_NAMES[card.Type] ?? 'Unknown'
   const attrName = ATTR_NAMES[card.Attribute] ?? ''
   const isMonster = card.Type < 20
@@ -44,34 +48,34 @@ function CardTip({ card, pos }: { card: Card; pos: Pos }) {
 
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const estH = sources[srcIdx] ? 340 : 160
-  const left = pos.x + TIP_W + 20 > vw ? pos.x - TIP_W - 12 : pos.x + 16
-  const top = Math.max(8, Math.min(pos.y - 10, vh - estH - 8))
+  const fitsRight = pos.x + TIP_TOTAL_W + OFFSET < vw
+  const left = fitsRight ? pos.x + OFFSET : pos.x - TIP_TOTAL_W - OFFSET
+  const top = Math.max(8, Math.min(pos.y - CARD_IMG_H / 2, vh - CARD_IMG_H - 8))
 
   return (
     <div
-      style={{ position: 'fixed', left, top, width: TIP_W, zIndex: 9999, pointerEvents: 'none' }}
-      className="bg-[#0a0a14] border border-[#1e1e2e] rounded shadow-2xl shadow-black/80 overflow-hidden"
+      style={{ position: 'fixed', left, top, width: TIP_TOTAL_W, zIndex: 9999, pointerEvents: 'none' }}
+      className="flex bg-[#0a0a14] border border-[#1e1e2e] rounded shadow-2xl shadow-black/80 overflow-hidden"
     >
-      {sources[srcIdx] ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={sources[srcIdx]}
-          alt={card.Name}
-          onError={() => setSrcIdx(i => i + 1)}
-          className="w-full block object-cover"
-          style={{ height: TIP_W }}
-        />
-      ) : (
-        <div
-          className="w-full flex items-center justify-center bg-[#111120] text-[#333] text-[10px]"
-          style={{ height: 60 }}
-        >
-          {card.Name.slice(0, 8)}
-        </div>
-      )}
+      {/* Full card image */}
+      <div style={{ width: CARD_IMG_W, flexShrink: 0, height: CARD_IMG_H }}>
+        {sources[srcIdx] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={sources[srcIdx]}
+            alt={card.Name}
+            onError={() => setSrcIdx(i => i + 1)}
+            className="block w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-[#111120] text-[#333] text-[10px]">
+            {card.Name.slice(0, 8)}
+          </div>
+        )}
+      </div>
 
-      <div className="px-2 pt-1.5 pb-2">
+      {/* Details panel */}
+      <div className="px-2 pt-2 pb-2 flex flex-col overflow-hidden" style={{ width: DETAILS_W, height: CARD_IMG_H }}>
         <div className="text-[11px] font-semibold leading-tight mb-1.5 truncate" style={{ color: typeColor }}>
           {card.Name}
         </div>
@@ -112,12 +116,13 @@ function CardTip({ card, pos }: { card: Card; pos: Pos }) {
         )}
 
         {card.Description && (
-          <div className="text-[9px] text-[#555] leading-tight line-clamp-3 mt-0.5">
+          <div className="text-[9px] text-[#555] leading-tight mt-0.5 flex-1 overflow-hidden"
+            style={{ display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
             {card.Description}
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-[#111120]">
+        <div className="flex items-center justify-between mt-auto pt-1 border-t border-[#111120]">
           <span className="text-[8px] font-mono text-[#2a2a3a] tracking-wider">
             {card.CardCode || '—'}
           </span>
@@ -143,7 +148,9 @@ function NpcTip({ slug, name, pos }: { slug: string; name: string; pos: Pos }) {
 
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const left = pos.x + TIP_W + 20 > vw ? pos.x - TIP_W - 12 : pos.x + 16
+  const NPC_W = 180
+  const fitsRight = pos.x + NPC_W + OFFSET < vw
+  const left = fitsRight ? pos.x + OFFSET : pos.x - NPC_W - OFFSET
   const top = Math.max(8, Math.min(pos.y - 10, vh - 100))
 
   return (

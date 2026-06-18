@@ -28,7 +28,7 @@ export function localUrl(card: Card): string {
 // Returns the pre-generated 48×48 thumbnail, if a local image exists for this card
 export function localThumbUrl(card: Card): string {
   if (!localUrl(card)) return ''
-  return `${BASE_PATH}/images/thumbs/${card.Id}.jpg`
+  return `${BASE_PATH}/images/fm/thumbs/${card.Id}.jpg`
 }
 
 // Returns ordered fallback sources for thumbnails: local thumb → local full → CDN
