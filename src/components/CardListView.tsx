@@ -138,6 +138,7 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
           style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(86px, 1fr))', gap: 4 }}
         >
           {items.map(card => {
+            const isMonster = card.Type < 20
             const href = getCardHref?.(card.Id)
             const inner = (
               <div className="flex flex-col items-center px-0.5 pt-1 pb-0.5">
@@ -150,11 +151,13 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
                 >
                   {card.Name}
                 </div>
-                <div className="text-[8px] text-center leading-none mt-0.5">
-                  <span style={{ color: atkColor(card.Attack) }}>{card.Attack}</span>
-                  <span className="text-[#2a2a3a]">/</span>
-                  <span className="text-[#444]">{card.Defense}</span>
-                </div>
+                {isMonster && (
+                  <div className="text-[8px] text-center leading-none mt-0.5">
+                    <span style={{ color: atkColor(card.Attack) }}>{card.Attack}</span>
+                    <span className="text-[#2a2a3a]">/</span>
+                    <span className="text-[#444]">{card.Defense}</span>
+                  </div>
+                )}
               </div>
             )
             return href ? (
@@ -207,6 +210,7 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
           </div>
 
           {tableItems.map(card => {
+            const isMonster = card.Type < 20
             const typeName = TYPE_NAMES[card.Type] || ''
             const typeImg = TYPE_IMAGES[card.Type]
             const attrName = ATTR_NAMES[card.Attribute] || ''
@@ -235,11 +239,11 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
                       style={{ width: 12, height: 12, objectFit: 'contain' }} />
                   )}
                 </span>
-                <span className="text-[10px] font-mono text-right pr-1" style={{ color: atkColor(card.Attack) }}>
-                  {card.Attack}
+                <span className="text-[10px] font-mono text-right pr-1" style={{ color: isMonster ? atkColor(card.Attack) : '#2a2a3a' }}>
+                  {isMonster ? card.Attack : '—'}
                 </span>
-                <span className="text-[10px] font-mono text-[#555] text-right pr-1">{card.Defense}</span>
-                <span className="text-[10px] font-mono text-[#444] text-right pr-1">{card.Level}</span>
+                <span className="text-[10px] font-mono text-[#555] text-right pr-1">{isMonster ? card.Defense : '—'}</span>
+                <span className="text-[10px] font-mono text-[#444] text-right pr-1">{isMonster ? card.Level : '—'}</span>
                 <span className="text-[10px] font-mono text-[#444] text-right pr-1">{card.Stars}</span>
               </>
             )
