@@ -129,7 +129,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
                   color: ATTR_COLORS[attrName] ?? '#555',
                   cursor: onSelectAttr ? 'pointer' : undefined,
                 }}
-                title={onSelectAttr ? `View all ${attrName}` : undefined}
+                title={onSelectAttr ? `View ${attrName} monsters` : undefined}
               >
                 {ATTR_IMAGES[card.Attribute] && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -171,10 +171,10 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
           )}
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2">
             <span className="text-[9px] font-mono text-[#555]">ID <span className="text-[#888]">{card.Id}</span></span>
-            {card.Stars !== undefined && <span className="text-[9px] font-mono text-[#555]">Stars <span className="text-[#888]">{card.Stars}</span></span>}
             {card.CardCode && card.CardCode !== '00000000' && (
               <span className="text-[9px] font-mono text-[#555]">Password <span className="text-[#888]">{card.CardCode}</span></span>
             )}
+            {card.Stars !== undefined && <span className="text-[9px] font-mono text-[#555]">Star Cost <span className="text-[#888]">{card.Stars}</span></span>}
           </div>
         </div>
       </div>

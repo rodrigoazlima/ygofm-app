@@ -6,6 +6,8 @@ import { cards, computeRelatedIds, byId } from '@/lib/dataLoader'
 import { npcList, npcById } from '@/lib/dropsLoader'
 import { TYPE_NAMES, ATTR_NAMES, FIELD_BOOSTS } from '@/lib/constants'
 import { DEFAULT_GAME } from '@/lib/games'
+import { parseFilters, applyFilters } from '@/lib/filters'
+import type { FilterState } from '@/lib/filters'
 import { Logo } from './Logo'
 import { SearchBar } from './SearchBar'
 import { TooltipProvider } from './TooltipProvider'
@@ -13,7 +15,6 @@ import type { TypeSearchItem, AttrSearchItem, CategorySearchItem } from './Searc
 import { CardDetail } from './CardDetail'
 import { NpcDetail } from './NpcDetail'
 import { TypeDetail } from './TypeDetail'
-import { AttributeDetail } from './AttributeDetail'
 import { CategoryDetail } from './CategoryDetail'
 import { CategoryBrowser } from './CategoryBrowser'
 import { CardGrid } from './CardGrid'
@@ -53,12 +54,6 @@ export function SearchPage() {
     const idx = Number(raw)
     return idx >= 0 && idx < TYPE_NAMES.length ? idx : null
   })
-  const [selectedAttr, setSelectedAttr] = useState<number | null>(() => {
-    const raw = searchParams.get('attr')
-    if (!raw) return null
-    const idx = Number(raw)
-    return idx >= 0 && idx < ATTR_NAMES.length ? idx : null
-  })
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | null>(() => {
     const raw = searchParams.get('cat')
     return raw === 'monster' || raw === 'field' ? raw : null
@@ -66,9 +61,19 @@ export function SearchPage() {
   const [game, setGame] = useState(() => searchParams.get('game') ?? DEFAULT_GAME)
   const [fadingOut, setFadingOut] = useState(false)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mainRef = useRef<HTMLDivElement>(null)
+
+  const filterState = useMemo((): FilterState =>
+    parseFilters(
+      k => searchParams.get(k),
+      k => searchParams.has(k),
+      k => searchParams.getAll(k),
+    ),
+    [searchParams]
+  )
 
   const hasSelection = selectedId !== null || selectedNpcId !== null ||
-    selectedType !== null || selectedAttr !== null || selectedCategory !== null
+    selectedType !== null || selectedCategory !== null
   const isInitial = !query && !hasSelection
 
   useEffect(() => {
@@ -83,10 +88,21 @@ export function SearchPage() {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     fadeTimerRef.current = null
 
+    // Legacy ?attr=X → redirect to ?cat=monster&fAttr=X
+    const rawAttr = searchParams.get('attr')
+    if (rawAttr !== null) {
+      const p = new URLSearchParams(searchParams.toString())
+      p.delete('attr')
+      p.set('cat', 'monster')
+      p.set('fAttr', rawAttr)
+      const qs = p.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+      return
+    }
+
     const rawCard = searchParams.get('card')
     const rawNpc = searchParams.get('npc')
     const rawType = searchParams.get('type')
-    const rawAttr = searchParams.get('attr')
     const rawCat = searchParams.get('cat')
 
     setSelectedId(rawCard ? (byId[Number(rawCard)] ? Number(rawCard) : null) : null)
@@ -94,14 +110,11 @@ export function SearchPage() {
     setSelectedType(rawType !== null
       ? (Number(rawType) >= 0 && Number(rawType) < TYPE_NAMES.length ? Number(rawType) : null)
       : null)
-    setSelectedAttr(rawAttr !== null
-      ? (Number(rawAttr) >= 0 && Number(rawAttr) < ATTR_NAMES.length ? Number(rawAttr) : null)
-      : null)
     setSelectedCategory(rawCat === 'monster' || rawCat === 'field' ? rawCat : null)
     setGame(searchParams.get('game') ?? DEFAULT_GAME)
     setQuery(searchParams.get('q') ?? '')
     setFadingOut(false)
-  }, [searchParams])
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const autocompleteCards = useMemo(() => {
     if (!query) return []
@@ -161,10 +174,16 @@ export function SearchPage() {
     }
     if (selectedType !== null)
       return new Set(cards.filter(c => c.Type === selectedType).map(c => c.Id))
-    if (selectedAttr !== null)
-      return new Set(cards.filter(c => c.Attribute === selectedAttr).map(c => c.Id))
-    if (selectedCategory === 'monster')
-      return new Set(cards.filter(c => c.Type < 20).map(c => c.Id))
+    if (selectedCategory === 'monster') {
+      const f = filterState
+      return new Set(
+        cards.filter(c =>
+          c.Type < 20 &&
+          (f.filterAttr === null || c.Attribute === f.filterAttr) &&
+          (f.filterType === null || f.filterType.includes(c.Type))
+        ).map(c => c.Id)
+      )
+    }
     if (selectedCategory === 'field')
       return new Set(cards.filter(c => FIELD_IDS.has(c.Id)).map(c => c.Id))
     if (query) {
@@ -181,7 +200,15 @@ export function SearchPage() {
       return ids
     }
     return new Set<number>()
-  }, [selectedId, selectedNpcId, selectedType, selectedAttr, query])
+  }, [selectedId, selectedNpcId, selectedType, selectedCategory, filterState, query])
+
+  const handleFilterChange = useCallback((partial: Partial<FilterState>) => {
+    const merged = { ...filterState, ...partial }
+    const base = new URLSearchParams(searchParams.toString())
+    const p = applyFilters(base, merged)
+    const qs = p.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [filterState, searchParams, pathname, router])
 
   const handleQueryChange = useCallback((q: string) => {
     setQuery(q)
@@ -189,12 +216,11 @@ export function SearchPage() {
     if (selectedId !== null) params.set('card', String(selectedId))
     if (selectedNpcId !== null) params.set('npc', String(selectedNpcId))
     if (selectedType !== null) params.set('type', String(selectedType))
-    if (selectedAttr !== null) params.set('attr', String(selectedAttr))
     if (q) params.set('q', q)
     if (game !== DEFAULT_GAME) params.set('game', game)
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [selectedId, selectedNpcId, selectedType, selectedAttr, pathname, router, game])
+  }, [selectedId, selectedNpcId, selectedType, pathname, router, game])
 
   const handleGameChange = useCallback((newGame: string) => {
     setGame(newGame)
@@ -207,24 +233,25 @@ export function SearchPage() {
 
   const clearAllSelections = () => {
     setSelectedId(null); setSelectedNpcId(null)
-    setSelectedType(null); setSelectedAttr(null); setSelectedCategory(null)
+    setSelectedType(null); setSelectedCategory(null)
   }
 
   const handleSelect = useCallback((id: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedId(id); setSelectedNpcId(null); setSelectedType(null); setSelectedAttr(null)
+    setSelectedId(id); setSelectedNpcId(null); setSelectedType(null)
     setQuery('')
     const params = new URLSearchParams()
     params.set('card', String(id))
     if (game !== DEFAULT_GAME) params.set('game', game)
     router.push(`${pathname}?${params}`, { scroll: false })
+    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [pathname, router, game])
 
   const handleSelectNpc = useCallback((id: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedNpcId(id); setSelectedId(null); setSelectedType(null); setSelectedAttr(null)
+    setSelectedNpcId(id); setSelectedId(null); setSelectedType(null)
     setQuery('')
     const params = new URLSearchParams()
     params.set('npc', String(id))
@@ -235,7 +262,7 @@ export function SearchPage() {
   const handleSelectType = useCallback((typeIdx: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedType(typeIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedAttr(null); setSelectedCategory(null)
+    setSelectedType(typeIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedCategory(null)
     setQuery('')
     const params = new URLSearchParams()
     params.set('type', String(typeIdx))
@@ -246,10 +273,12 @@ export function SearchPage() {
   const handleSelectAttr = useCallback((attrIdx: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedAttr(attrIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null); setSelectedCategory(null)
+    setSelectedCategory('monster')
+    setSelectedId(null); setSelectedNpcId(null); setSelectedType(null)
     setQuery('')
     const params = new URLSearchParams()
-    params.set('attr', String(attrIdx))
+    params.set('cat', 'monster')
+    params.set('fAttr', String(attrIdx))
     if (game !== DEFAULT_GAME) params.set('game', game)
     router.push(`${pathname}?${params}`, { scroll: false })
   }, [pathname, router, game])
@@ -257,7 +286,7 @@ export function SearchPage() {
   const handleSelectCategory = useCallback((cat: CategoryId) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedCategory(cat); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null); setSelectedAttr(null)
+    setSelectedCategory(cat); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null)
     setQuery('')
     const params = new URLSearchParams()
     params.set('cat', cat)
@@ -323,7 +352,7 @@ export function SearchPage() {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto">
         {selectedId !== null && (
           <div key={`card-${selectedId}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
             <CardDetail cardId={selectedId} onSelect={handleSelect}
@@ -341,14 +370,14 @@ export function SearchPage() {
             <TypeDetail typeIdx={selectedType} onSelect={handleSelect} />
           </div>
         )}
-        {selectedAttr !== null && (
-          <div key={`attr-${selectedAttr}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
-            <AttributeDetail attrIdx={selectedAttr} onSelect={handleSelect} />
-          </div>
-        )}
         {selectedCategory !== null && (
           <div key={`cat-${selectedCategory}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
-            <CategoryDetail category={selectedCategory} onSelect={handleSelect} />
+            <CategoryDetail
+              category={selectedCategory}
+              filters={filterState}
+              onFilterChange={handleFilterChange}
+              onSelect={handleSelect}
+            />
           </div>
         )}
         {isInitial && !fadingOut && (
