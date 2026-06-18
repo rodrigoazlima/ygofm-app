@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import type { Card } from '@/lib/types'
 import { TYPE_NAMES, TYPE_IMAGES, ATTR_NAMES, ATTR_IMAGES, atkColor } from '@/lib/constants'
 import { CardThumb } from './CardThumb'
+import { useTooltip } from './TooltipProvider'
 
 export type ViewMode = 'grid' | 'table'
 
@@ -58,6 +59,14 @@ const COL_WIDTHS = '28px 1fr 22px 22px 48px 40px 36px 42px'
 export function CardListView({ cards: items, sortKey, accentColor, onSelect, viewMode: viewModeProp, onViewModeChange, tableSortField: tableSortFieldProp, tableSortDir: tableSortDirProp, onTableSortChange, getCardHref }: Props) {
   const [localTableCol, setLocalTableCol] = useState<TableCol>('Attack')
   const [localTableDir, setLocalTableDir] = useState<'asc' | 'desc'>('desc')
+  const tip = useTooltip()
+  const tipShow = useCallback((card: Card, e: React.MouseEvent) => {
+    tip?.show({ kind: 'card', card }, { x: e.clientX, y: e.clientY })
+  }, [tip])
+  const tipMove = useCallback((e: React.MouseEvent) => {
+    tip?.move({ x: e.clientX, y: e.clientY })
+  }, [tip])
+  const tipHide = useCallback(() => { tip?.hide() }, [tip])
   const tableCol = tableSortFieldProp ?? localTableCol
   const tableDir = tableSortDirProp ?? localTableDir
   const viewMode = viewModeProp ?? 'grid'
@@ -133,7 +142,12 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
             const inner = (
               <div className="flex flex-col items-center px-0.5 pt-1 pb-0.5">
                 <CardThumb card={card} size={52} />
-                <div className="text-[8px] text-[#777] text-center leading-none w-full truncate mt-0.5 px-0.5">
+                <div
+                  className="text-[8px] text-[#777] text-center leading-none w-full truncate mt-0.5 px-0.5"
+                  onMouseEnter={e => tipShow(card, e)}
+                  onMouseMove={tipMove}
+                  onMouseLeave={tipHide}
+                >
                   {card.Name}
                 </div>
                 <div className="text-[8px] text-center leading-none mt-0.5">
@@ -201,7 +215,12 @@ export function CardListView({ cards: items, sortKey, accentColor, onSelect, vie
             const rowContent = (
               <>
                 <CardThumb card={card} size={24} />
-                <span className="text-[10px] text-[#aaa] truncate pr-1">{card.Name}</span>
+                <span
+                  className="text-[10px] text-[#aaa] truncate pr-1"
+                  onMouseEnter={e => tipShow(card, e)}
+                  onMouseMove={tipMove}
+                  onMouseLeave={tipHide}
+                >{card.Name}</span>
                 <span className="flex justify-center">
                   {typeImg && (
                     // eslint-disable-next-line @next/next/no-img-element
