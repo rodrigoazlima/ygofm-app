@@ -5,8 +5,10 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { cards, computeRelatedIds, byId } from '@/lib/dataLoader'
 import { npcList, npcById } from '@/lib/dropsLoader'
 import { TYPE_NAMES, ATTR_NAMES } from '@/lib/constants'
+import { DEFAULT_GAME } from '@/lib/games'
 import { Logo } from './Logo'
 import { SearchBar } from './SearchBar'
+import { TooltipProvider } from './TooltipProvider'
 import type { TypeSearchItem, AttrSearchItem } from './SearchBar'
 import { CardDetail } from './CardDetail'
 import { NpcDetail } from './NpcDetail'
@@ -50,6 +52,7 @@ export function SearchPage() {
     const idx = Number(raw)
     return idx >= 0 && idx < ATTR_NAMES.length ? idx : null
   })
+  const [game, setGame] = useState(() => searchParams.get('game') ?? DEFAULT_GAME)
   const [fadingOut, setFadingOut] = useState(false)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -82,6 +85,7 @@ export function SearchPage() {
     setSelectedAttr(rawAttr !== null
       ? (Number(rawAttr) >= 0 && Number(rawAttr) < ATTR_NAMES.length ? Number(rawAttr) : null)
       : null)
+    setGame(searchParams.get('game') ?? DEFAULT_GAME)
     setQuery(searchParams.get('q') ?? '')
     setFadingOut(false)
   }, [searchParams])
@@ -152,9 +156,19 @@ export function SearchPage() {
     if (selectedType !== null) params.set('type', String(selectedType))
     if (selectedAttr !== null) params.set('attr', String(selectedAttr))
     if (q) params.set('q', q)
+    if (game !== DEFAULT_GAME) params.set('game', game)
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [selectedId, selectedNpcId, selectedType, selectedAttr, pathname, router])
+  }, [selectedId, selectedNpcId, selectedType, selectedAttr, pathname, router, game])
+
+  const handleGameChange = useCallback((newGame: string) => {
+    setGame(newGame)
+    const params = new URLSearchParams(searchParams.toString())
+    if (newGame === DEFAULT_GAME) params.delete('game')
+    else params.set('game', newGame)
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [searchParams, pathname, router])
 
   const clearAllSelections = () => {
     setSelectedId(null); setSelectedNpcId(null)
@@ -166,32 +180,44 @@ export function SearchPage() {
     setFadingOut(false)
     setSelectedId(id); setSelectedNpcId(null); setSelectedType(null); setSelectedAttr(null)
     setQuery('')
-    router.push(`${pathname}?card=${id}`, { scroll: false })
-  }, [pathname, router])
+    const params = new URLSearchParams()
+    params.set('card', String(id))
+    if (game !== DEFAULT_GAME) params.set('game', game)
+    router.push(`${pathname}?${params}`, { scroll: false })
+  }, [pathname, router, game])
 
   const handleSelectNpc = useCallback((id: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
     setSelectedNpcId(id); setSelectedId(null); setSelectedType(null); setSelectedAttr(null)
     setQuery('')
-    router.push(`${pathname}?npc=${id}`, { scroll: false })
-  }, [pathname, router])
+    const params = new URLSearchParams()
+    params.set('npc', String(id))
+    if (game !== DEFAULT_GAME) params.set('game', game)
+    router.push(`${pathname}?${params}`, { scroll: false })
+  }, [pathname, router, game])
 
   const handleSelectType = useCallback((typeIdx: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
     setSelectedType(typeIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedAttr(null)
     setQuery('')
-    router.push(`${pathname}?type=${typeIdx}`, { scroll: false })
-  }, [pathname, router])
+    const params = new URLSearchParams()
+    params.set('type', String(typeIdx))
+    if (game !== DEFAULT_GAME) params.set('game', game)
+    router.push(`${pathname}?${params}`, { scroll: false })
+  }, [pathname, router, game])
 
   const handleSelectAttr = useCallback((attrIdx: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
     setSelectedAttr(attrIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null)
     setQuery('')
-    router.push(`${pathname}?attr=${attrIdx}`, { scroll: false })
-  }, [pathname, router])
+    const params = new URLSearchParams()
+    params.set('attr', String(attrIdx))
+    if (game !== DEFAULT_GAME) params.set('game', game)
+    router.push(`${pathname}?${params}`, { scroll: false })
+  }, [pathname, router, game])
 
   const handleClear = useCallback(() => {
     setQuery('')
@@ -201,9 +227,10 @@ export function SearchPage() {
     fadeTimerRef.current = setTimeout(() => {
       clearAllSelections()
       setFadingOut(false)
-      router.push(pathname, { scroll: false })
+      const dest = game !== DEFAULT_GAME ? `${pathname}?game=${game}` : pathname
+      router.push(dest, { scroll: false })
     }, FADE_MS)
-  }, [hasSelection, pathname, router]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSelection, pathname, router, game]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hasSelection && !fadingOut &&
@@ -229,18 +256,19 @@ export function SearchPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#09090b]">
       <header className="shrink-0 z-40 bg-[#09090b] border-b border-[#151520] px-4 pt-3 pb-3">
         {compact ? (
           <div className="flex items-center gap-3">
-            <Logo compact onClear={handleClear} />
+            <Logo compact game={game} onClear={handleClear} />
             <div className="flex-1">
               <SearchBar {...searchBarProps} onClear={handleClear} hasSelection={hasSelection} />
             </div>
           </div>
         ) : (
           <>
-            <Logo compact={false} />
+            <Logo compact={false} game={game} onGameChange={handleGameChange} />
             <SearchBar {...searchBarProps} />
           </>
         )}
@@ -272,5 +300,6 @@ export function SearchPage() {
         <CardGrid brightIds={brightIds} isInitial={isInitial} onSelect={handleSelect} />
       </main>
     </div>
+    </TooltipProvider>
   )
 }

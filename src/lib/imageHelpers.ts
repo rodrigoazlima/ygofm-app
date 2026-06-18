@@ -1,6 +1,6 @@
-import type { Card } from './types'
-import { THUMB_BASE, FULL_BASE, CODE_FIXES } from './constants'
-import { localImages, fandomImages } from './dataLoader'
+import type { Card } from './games/fm/types'
+import { THUMB_BASE, FULL_BASE, CODE_FIXES } from './games/fm/constants'
+import { localImages, fandomImages } from './games/fm/dataLoader'
 
 function getCode(card: Card): string {
   let code = card.CardCode || ''
