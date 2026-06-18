@@ -73,7 +73,7 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
     const fieldTypes = FIELD_BOOSTS[card.Id]
     if (fieldTypes) {
       const names = fieldTypes.map(i => TYPE_NAMES[i]).filter(Boolean)
-      return `+200 ATK/DEF → ${names.join(', ')}`
+      return `+500 ATK/DEF → ${names.join(', ')}`
     }
     return null
   })()
