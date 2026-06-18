@@ -169,6 +169,13 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
               {effectLine}
             </p>
           )}
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2">
+            <span className="text-[9px] font-mono text-[#555]">ID <span className="text-[#888]">{card.Id}</span></span>
+            {card.Stars !== undefined && <span className="text-[9px] font-mono text-[#555]">Stars <span className="text-[#888]">{card.Stars}</span></span>}
+            {card.CardCode && card.CardCode !== '00000000' && (
+              <span className="text-[9px] font-mono text-[#555]">Code <span className="text-[#888]">{card.CardCode}</span></span>
+            )}
+          </div>
         </div>
       </div>
 

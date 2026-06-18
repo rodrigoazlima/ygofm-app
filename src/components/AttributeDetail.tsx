@@ -49,10 +49,10 @@ export const AttributeDetail = memo(function AttributeDetail({ attrIdx, onSelect
           >
             <div className="flex flex-col items-center px-0.5 pt-1 pb-0.5">
               <CardThumb card={card} size={52} />
-              <div className="text-[7px] text-[#777] text-center leading-none w-full truncate mt-0.5 px-0.5">
+              <div className="text-[8px] text-[#777] text-center leading-none w-full truncate mt-0.5 px-0.5">
                 {card.Name}
               </div>
-              <div className="text-[7px] text-center leading-none mt-0.5">
+              <div className="text-[8px] text-center leading-none mt-0.5">
                 <span style={{ color: atkColor(card.Attack) }}>{card.Attack}</span>
                 <span className="text-[#2a2a3a]">/</span>
                 <span className="text-[#444]">{card.Defense}</span>
