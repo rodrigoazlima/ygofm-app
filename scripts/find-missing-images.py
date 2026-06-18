@@ -6,7 +6,7 @@ import urllib.request
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-base = os.path.dirname(os.path.abspath(__file__))
+base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 with open(os.path.join(base, "src/data/cards.json"), encoding="utf-8") as f:
     cards = json.load(f)
