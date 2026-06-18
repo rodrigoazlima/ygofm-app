@@ -229,7 +229,7 @@ export function SearchPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#09090b]">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#09090b]">
       <header className="shrink-0 z-40 bg-[#09090b] border-b border-[#151520] px-4 pt-3 pb-3">
         {compact ? (
           <div className="flex items-center gap-3">

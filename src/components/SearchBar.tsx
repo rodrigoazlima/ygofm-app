@@ -152,16 +152,17 @@ export function SearchBar({
         </span>
         <input
           ref={inputRef}
-          autoFocus
           type="text"
           value={query}
           onChange={e => onChange(e.target.value)}
           onKeyDown={handleKey}
           onFocus={() => query && totalItems > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
           placeholder="Search cards, NPCs or types..."
           className="w-full bg-[#111118] border border-[#2a2a40] rounded-md pl-9 pr-9 py-2.5 text-sm text-[#e8e8f0] placeholder-[#444] focus:outline-none focus:border-[#0C5CAB] focus:ring-1 focus:ring-[#0C5CAB] transition-colors"
           spellCheck={false}
+          inputMode="search"
+          enterKeyHint="search"
         />
         {showClear && (
           <button

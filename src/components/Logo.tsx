@@ -24,10 +24,10 @@ export function Logo({ compact, onClear }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center py-10 select-none">
-      <svg width="680" height="90" viewBox="0 0 600 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div className="flex flex-col items-center py-10 select-none px-4">
+      <svg width="100%" style={{ maxWidth: 700 }} viewBox="0 0 700 110" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="gf" x1="0" y1="0" x2="600" y2="0" gradientUnits="userSpaceOnUse">
+          <linearGradient id="gf" x1="0" y1="0" x2="700" y2="0" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#f5c842"/>
             <stop offset="45%" stopColor="#fff8dc"/>
             <stop offset="100%" stopColor="#d4a017"/>
@@ -41,7 +41,7 @@ export function Logo({ compact, onClear }: Props) {
           </filter>
         </defs>
         <text
-          x="300" y="85"
+          x="350" y="85"
           textAnchor="middle"
           fontFamily="'IBM Plex Sans', sans-serif"
           fontWeight="800"

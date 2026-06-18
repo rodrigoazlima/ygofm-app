@@ -27,7 +27,7 @@ function CardImage({ card }: { card: Card }) {
   const exhausted = srcIdx >= sources.length
 
   return exhausted ? (
-    <div className="w-44 h-56 flex items-center justify-center bg-[#1a1a2e] text-[#444] text-xs rounded">
+    <div className="w-32 h-40 sm:w-44 sm:h-56 flex items-center justify-center bg-[#1a1a2e] text-[#444] text-xs rounded">
       {card.Name.slice(0, 8)}
     </div>
   ) : (
@@ -36,7 +36,7 @@ function CardImage({ card }: { card: Card }) {
       src={sources[srcIdx]}
       alt={card.Name}
       onError={() => setSrcIdx(i => i + 1)}
-      className="w-44 h-56 object-cover rounded shadow-lg"
+      className="w-32 h-40 sm:w-44 sm:h-56 object-cover rounded shadow-lg"
     />
   )
 }
