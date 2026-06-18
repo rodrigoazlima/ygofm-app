@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
 import { GAMES, DEFAULT_GAME, getGame } from '@/lib/games'
 
 interface Props {
@@ -7,25 +10,105 @@ interface Props {
   onClear?: () => void
 }
 
+const goldStyle = {
+  background: 'linear-gradient(90deg, #f5c842, #fff8dc, #d4a017)',
+  WebkitBackgroundClip: 'text' as const,
+  WebkitTextFillColor: 'transparent' as const,
+  backgroundClip: 'text' as const,
+  fontFamily: "'IBM Plex Sans', sans-serif",
+  letterSpacing: '-0.5px',
+}
+
 export function Logo({ compact, game = DEFAULT_GAME, onGameChange, onClear }: Props) {
+  const [open, setOpen] = useState(false)
+  const dropRef = useRef<HTMLDivElement>(null)
   const currentGame = getGame(game)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
 
   if (compact) {
     return (
-      <span
-        onClick={onClear}
-        className={`font-bold text-lg leading-none shrink-0 ${onClear ? 'cursor-pointer opacity-90 hover:opacity-100 transition-opacity' : ''}`}
-        style={{
-          background: 'linear-gradient(90deg, #f5c842, #fff8dc, #d4a017)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          fontFamily: "'IBM Plex Sans', sans-serif",
-          letterSpacing: '-0.5px',
-        }}
+      <div
+        className="flex items-center font-bold text-lg leading-none shrink-0 select-none"
+        style={{ fontFamily: "'IBM Plex Sans', sans-serif", letterSpacing: '-0.5px' }}
       >
-        Yu-Gi-Oh! {currentGame.shortName} &gt; Search
-      </span>
+        <span
+          onClick={onClear}
+          style={goldStyle}
+          className={`${onClear ? 'cursor-pointer opacity-90 hover:opacity-100 transition-opacity' : ''}`}
+        >
+          Yu-Gi-Oh!
+        </span>
+
+        <span className="text-[#383840] mx-1.5 font-normal">›</span>
+
+        {/* Game selector */}
+        <div className="relative" ref={dropRef}>
+          <button
+            onClick={() => setOpen(v => !v)}
+            className="flex items-center gap-0.5 opacity-90 hover:opacity-100 transition-opacity focus:outline-none"
+            style={goldStyle}
+          >
+            {currentGame.shortName}
+            <span style={{ WebkitTextFillColor: '#666', color: '#666', fontSize: '0.65em', marginLeft: 2 }}>▾</span>
+          </button>
+
+          {open && (
+            <div className="absolute top-full left-0 mt-2 bg-[#0d0d18] border border-[#1e1e2e] rounded shadow-2xl shadow-black/80 z-50 py-1 min-w-[200px]">
+              {GAMES.map(g => {
+                const isActive = g.id === game
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      if (!g.available) return
+                      onGameChange?.(g.id)
+                      setOpen(false)
+                    }}
+                    className={`w-full text-left px-3 py-1.5 flex items-center gap-2.5 transition-colors ${
+                      isActive
+                        ? 'bg-[#f5c842]/5'
+                        : g.available
+                          ? 'hover:bg-[#ffffff08] cursor-pointer'
+                          : 'cursor-not-allowed'
+                    }`}
+                  >
+                    <span
+                      className="font-mono text-[11px] w-7 shrink-0"
+                      style={{ color: isActive ? '#f5c842' : g.available ? '#888' : '#333' }}
+                    >
+                      {g.shortName}
+                    </span>
+                    <span
+                      className="text-[11px] truncate"
+                      style={{ color: isActive ? '#f5c842' : g.available ? '#777' : '#2a2a2a' }}
+                    >
+                      {g.name}
+                    </span>
+                    {!g.available && (
+                      <span className="text-[9px] text-[#252525] ml-auto shrink-0">soon</span>
+                    )}
+                    {isActive && (
+                      <span className="text-[#f5c842] text-[10px] ml-auto shrink-0">✓</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <span className="text-[#383840] mx-1.5 font-normal">›</span>
+
+        <span style={{ ...goldStyle, opacity: 0.55 }}>Search</span>
+      </div>
     )
   }
 

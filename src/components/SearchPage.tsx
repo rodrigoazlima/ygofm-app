@@ -4,18 +4,25 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { cards, computeRelatedIds, byId } from '@/lib/dataLoader'
 import { npcList, npcById } from '@/lib/dropsLoader'
-import { TYPE_NAMES, ATTR_NAMES } from '@/lib/constants'
+import { TYPE_NAMES, ATTR_NAMES, FIELD_BOOSTS } from '@/lib/constants'
 import { DEFAULT_GAME } from '@/lib/games'
 import { Logo } from './Logo'
 import { SearchBar } from './SearchBar'
 import { TooltipProvider } from './TooltipProvider'
-import type { TypeSearchItem, AttrSearchItem } from './SearchBar'
+import type { TypeSearchItem, AttrSearchItem, CategorySearchItem } from './SearchBar'
 import { CardDetail } from './CardDetail'
 import { NpcDetail } from './NpcDetail'
 import { TypeDetail } from './TypeDetail'
 import { AttributeDetail } from './AttributeDetail'
+import { CategoryDetail } from './CategoryDetail'
+import { CategoryBrowser } from './CategoryBrowser'
 import { CardGrid } from './CardGrid'
 import { localUrl } from '@/lib/imageHelpers'
+import type { CategoryId } from './CategoryDetail'
+
+const FIELD_IDS = new Set(Object.keys(FIELD_BOOSTS).map(Number))
+const MONSTER_COUNT = cards.filter(c => c.Type < 20).length
+const FIELD_COUNT = cards.filter(c => FIELD_IDS.has(c.Id)).length
 
 const FADE_MS = 180
 
@@ -52,12 +59,16 @@ export function SearchPage() {
     const idx = Number(raw)
     return idx >= 0 && idx < ATTR_NAMES.length ? idx : null
   })
+  const [selectedCategory, setSelectedCategory] = useState<CategoryId | null>(() => {
+    const raw = searchParams.get('cat')
+    return raw === 'monster' || raw === 'field' ? raw : null
+  })
   const [game, setGame] = useState(() => searchParams.get('game') ?? DEFAULT_GAME)
   const [fadingOut, setFadingOut] = useState(false)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const hasSelection = selectedId !== null || selectedNpcId !== null ||
-    selectedType !== null || selectedAttr !== null
+    selectedType !== null || selectedAttr !== null || selectedCategory !== null
   const isInitial = !query && !hasSelection
 
   useEffect(() => {
@@ -76,6 +87,7 @@ export function SearchPage() {
     const rawNpc = searchParams.get('npc')
     const rawType = searchParams.get('type')
     const rawAttr = searchParams.get('attr')
+    const rawCat = searchParams.get('cat')
 
     setSelectedId(rawCard ? (byId[Number(rawCard)] ? Number(rawCard) : null) : null)
     setSelectedNpcId(rawNpc ? (npcById[Number(rawNpc)] ? Number(rawNpc) : null) : null)
@@ -85,6 +97,7 @@ export function SearchPage() {
     setSelectedAttr(rawAttr !== null
       ? (Number(rawAttr) >= 0 && Number(rawAttr) < ATTR_NAMES.length ? Number(rawAttr) : null)
       : null)
+    setSelectedCategory(rawCat === 'monster' || rawCat === 'field' ? rawCat : null)
     setGame(searchParams.get('game') ?? DEFAULT_GAME)
     setQuery(searchParams.get('q') ?? '')
     setFadingOut(false)
@@ -106,8 +119,12 @@ export function SearchPage() {
     if (!query) return []
     const q = query.toLowerCase()
     return TYPE_NAMES
-      .map((name, typeIdx) => ({ typeIdx, name, count: TYPE_COUNTS[typeIdx] }))
-      .filter(t => t.name.toLowerCase().includes(q))
+      .map((name, typeIdx) => ({
+        typeIdx,
+        name: typeIdx === 20 ? 'Magic / Spell' : name,
+        count: TYPE_COUNTS[typeIdx],
+      }))
+      .filter(t => t.name.toLowerCase().includes(q) || (q === 'spell' && t.typeIdx === 20))
   }, [query])
 
   const autocompleteAttrs = useMemo((): AttrSearchItem[] => {
@@ -116,6 +133,20 @@ export function SearchPage() {
     return ATTR_NAMES
       .map((name, attrIdx) => ({ attrIdx, name, count: ATTR_COUNTS[attrIdx] }))
       .filter(a => a.name.toLowerCase().includes(q))
+  }, [query])
+
+  const autocompleteCategories = useMemo((): CategorySearchItem[] => {
+    if (!query) return []
+    const q = query.toLowerCase()
+    const cats: CategorySearchItem[] = [
+      { categoryId: 'monster', label: 'Monster (All Types)', count: MONSTER_COUNT, color: '#a83' },
+      { categoryId: 'field', label: 'Field Spell', count: FIELD_COUNT, color: '#4a6' },
+    ]
+    return cats.filter(c =>
+      c.label.toLowerCase().includes(q) ||
+      (q.includes('spell') && c.categoryId === 'field') ||
+      (q === 'monster' && c.categoryId === 'monster')
+    )
   }, [query])
 
   const brightIds = useMemo((): Set<number> => {
@@ -132,6 +163,10 @@ export function SearchPage() {
       return new Set(cards.filter(c => c.Type === selectedType).map(c => c.Id))
     if (selectedAttr !== null)
       return new Set(cards.filter(c => c.Attribute === selectedAttr).map(c => c.Id))
+    if (selectedCategory === 'monster')
+      return new Set(cards.filter(c => c.Type < 20).map(c => c.Id))
+    if (selectedCategory === 'field')
+      return new Set(cards.filter(c => FIELD_IDS.has(c.Id)).map(c => c.Id))
     if (query) {
       const q = query.toLowerCase()
       const ids = new Set(cards.filter(c => c.Name.toLowerCase().includes(q)).map(c => c.Id))
@@ -172,7 +207,7 @@ export function SearchPage() {
 
   const clearAllSelections = () => {
     setSelectedId(null); setSelectedNpcId(null)
-    setSelectedType(null); setSelectedAttr(null)
+    setSelectedType(null); setSelectedAttr(null); setSelectedCategory(null)
   }
 
   const handleSelect = useCallback((id: number) => {
@@ -200,7 +235,7 @@ export function SearchPage() {
   const handleSelectType = useCallback((typeIdx: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedType(typeIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedAttr(null)
+    setSelectedType(typeIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedAttr(null); setSelectedCategory(null)
     setQuery('')
     const params = new URLSearchParams()
     params.set('type', String(typeIdx))
@@ -211,10 +246,21 @@ export function SearchPage() {
   const handleSelectAttr = useCallback((attrIdx: number) => {
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(false)
-    setSelectedAttr(attrIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null)
+    setSelectedAttr(attrIdx); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null); setSelectedCategory(null)
     setQuery('')
     const params = new URLSearchParams()
     params.set('attr', String(attrIdx))
+    if (game !== DEFAULT_GAME) params.set('game', game)
+    router.push(`${pathname}?${params}`, { scroll: false })
+  }, [pathname, router, game])
+
+  const handleSelectCategory = useCallback((cat: CategoryId) => {
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+    setFadingOut(false)
+    setSelectedCategory(cat); setSelectedId(null); setSelectedNpcId(null); setSelectedType(null); setSelectedAttr(null)
+    setQuery('')
+    const params = new URLSearchParams()
+    params.set('cat', cat)
     if (game !== DEFAULT_GAME) params.set('game', game)
     router.push(`${pathname}?${params}`, { scroll: false })
   }, [pathname, router, game])
@@ -237,11 +283,12 @@ export function SearchPage() {
         autocompleteCards.length === 1 &&
         autocompleteNpcs.length === 0 &&
         autocompleteTypes.length === 0 &&
-        autocompleteAttrs.length === 0) {
+        autocompleteAttrs.length === 0 &&
+        autocompleteCategories.length === 0) {
       handleSelect(autocompleteCards[0].Id)
     }
   }, [autocompleteCards, autocompleteNpcs, autocompleteTypes, autocompleteAttrs,
-      hasSelection, fadingOut, handleSelect])
+      autocompleteCategories, hasSelection, fadingOut, handleSelect])
 
   useEffect(() => () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current) }, [])
 
@@ -251,8 +298,10 @@ export function SearchPage() {
     query, onChange: handleQueryChange,
     onSelect: handleSelect, onSelectNpc: handleSelectNpc,
     onSelectType: handleSelectType, onSelectAttr: handleSelectAttr,
+    onSelectCategory: handleSelectCategory,
     items: autocompleteCards, npcItems: autocompleteNpcs,
     typeItems: autocompleteTypes, attrItems: autocompleteAttrs,
+    categoryItems: autocompleteCategories,
   }
 
   return (
@@ -296,6 +345,18 @@ export function SearchPage() {
           <div key={`attr-${selectedAttr}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
             <AttributeDetail attrIdx={selectedAttr} onSelect={handleSelect} />
           </div>
+        )}
+        {selectedCategory !== null && (
+          <div key={`cat-${selectedCategory}`} className={fadingOut ? 'card-detail-exit' : 'card-detail-enter'}>
+            <CategoryDetail category={selectedCategory} onSelect={handleSelect} />
+          </div>
+        )}
+        {isInitial && !fadingOut && (
+          <CategoryBrowser
+            onSelectType={handleSelectType}
+            onSelectAttr={handleSelectAttr}
+            onSelectCategory={handleSelectCategory}
+          />
         )}
         <CardGrid brightIds={brightIds} isInitial={isInitial} onSelect={handleSelect} />
       </main>

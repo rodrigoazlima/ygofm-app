@@ -24,6 +24,13 @@ export interface AttrSearchItem {
   count: number
 }
 
+export interface CategorySearchItem {
+  categoryId: 'monster' | 'field'
+  label: string
+  count: number
+  color: string
+}
+
 interface Props {
   query: string
   onChange: (q: string) => void
@@ -31,17 +38,19 @@ interface Props {
   onSelectNpc?: (id: number) => void
   onSelectType?: (typeIdx: number) => void
   onSelectAttr?: (attrIdx: number) => void
+  onSelectCategory?: (cat: 'monster' | 'field') => void
   onClear?: () => void
   hasSelection?: boolean
   items: Card[]
   npcItems?: NpcInfo[]
   typeItems?: TypeSearchItem[]
   attrItems?: AttrSearchItem[]
+  categoryItems?: CategorySearchItem[]
 }
 
 export function SearchBar({
-  query, onChange, onSelect, onSelectNpc, onSelectType, onSelectAttr,
-  onClear, hasSelection, items, npcItems = [], typeItems = [], attrItems = [],
+  query, onChange, onSelect, onSelectNpc, onSelectType, onSelectAttr, onSelectCategory,
+  onClear, hasSelection, items, npcItems = [], typeItems = [], attrItems = [], categoryItems = [],
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -53,7 +62,7 @@ export function SearchBar({
     ...items.map(card => ({ kind: 'card' as const, card })),
     ...npcItems.map(npc => ({ kind: 'npc' as const, npc })),
   ]
-  const totalItems = mainItems.length + typeItems.length + attrItems.length
+  const totalItems = mainItems.length + typeItems.length + attrItems.length + categoryItems.length
 
   useEffect(() => {
     setActiveIdx(-1)
@@ -92,16 +101,25 @@ export function SearchBar({
     setActiveIdx(-1)
   }, [onSelectAttr])
 
-  // Unified index: main → types → attrs
+  const selectCategory = useCallback((cat: 'monster' | 'field') => {
+    onSelectCategory?.(cat)
+    setOpen(false)
+    setActiveIdx(-1)
+  }, [onSelectCategory])
+
+  // Unified index: main → types → attrs → categories
   const activateIdx = (idx: number) => {
     if (idx < mainItems.length) {
       selectMain(mainItems[idx])
     } else if (idx < mainItems.length + typeItems.length) {
       const typeItem = typeItems[idx - mainItems.length]
       if (typeItem) selectType(typeItem.typeIdx)
-    } else {
+    } else if (idx < mainItems.length + typeItems.length + attrItems.length) {
       const attrItem = attrItems[idx - mainItems.length - typeItems.length]
       if (attrItem) selectAttr(attrItem.attrIdx)
+    } else {
+      const catItem = categoryItems[idx - mainItems.length - typeItems.length - attrItems.length]
+      if (catItem) selectCategory(catItem.categoryId)
     }
   }
 
@@ -288,6 +306,29 @@ export function SearchBar({
                       )}
                       <span className="flex-1 text-xs truncate" style={{ color }}>{a.name}</span>
                       <span className="text-[9px] text-[#333] shrink-0">{a.count}</span>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Category separator + items */}
+            {categoryItems.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 px-3 pt-2 pb-1 border-t border-[#1e1e30]">
+                  <span className="text-[9px] uppercase tracking-widest text-[#333]">Category</span>
+                </div>
+                {categoryItems.map((cat, i) => {
+                  const globalIdx = mainItems.length + typeItems.length + attrItems.length + i
+                  const active = globalIdx === activeIdx
+                  return (
+                    <div
+                      key={`cat-${cat.categoryId}`}
+                      onMouseDown={() => selectCategory(cat.categoryId)}
+                      className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${active ? 'bg-[#0C5CAB]/30' : 'hover:bg-[#1a1a2e]'}`}
+                    >
+                      <span className="flex-1 text-xs truncate" style={{ color: cat.color }}>{cat.label}</span>
+                      <span className="text-[9px] text-[#333] shrink-0">{cat.count}</span>
                     </div>
                   )
                 })}

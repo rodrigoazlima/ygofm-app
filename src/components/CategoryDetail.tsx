@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useState, useEffect, useCallback } from 'react'
 import { cards } from '@/lib/dataLoader'
-import { TYPE_NAMES, TYPE_IMAGES, TYPE_COLORS, atkColor } from '@/lib/constants'
+import { FIELD_BOOSTS, atkColor } from '@/lib/constants'
 import { CardThumb } from './CardThumb'
 
 type SortField = 'Attack' | 'Defense' | 'Level' | 'Stars'
@@ -15,6 +15,20 @@ const SORT_FIELDS: { key: SortField; label: string }[] = [
   { key: 'Stars', label: 'STARS' },
 ]
 
+const FIELD_IDS = new Set(Object.keys(FIELD_BOOSTS).map(Number))
+
+export type CategoryId = 'monster' | 'field'
+
+interface CategoryMeta {
+  label: string
+  color: string
+}
+
+const META: Record<CategoryId, CategoryMeta> = {
+  monster: { label: 'Monster', color: '#a83' },
+  field: { label: 'Field Spell', color: '#4a6' },
+}
+
 function readSort(): [SortField, SortDir] {
   if (typeof window === 'undefined') return ['Attack', 'desc']
   return [
@@ -24,19 +38,17 @@ function readSort(): [SortField, SortDir] {
 }
 
 interface Props {
-  typeIdx: number
+  category: CategoryId
   onSelect: (cardId: number) => void
 }
 
-export const TypeDetail = memo(function TypeDetail({ typeIdx, onSelect }: Props) {
-  const name = TYPE_NAMES[typeIdx] ?? ''
-  const img = TYPE_IMAGES[typeIdx]
-  const color = TYPE_COLORS[name] || '#666'
+export const CategoryDetail = memo(function CategoryDetail({ category, onSelect }: Props) {
+  const meta = META[category]
   const [sortField, setSortField] = useState<SortField>(() => readSort()[0])
   const [sortDir, setSortDir] = useState<SortDir>(() => readSort()[1])
   const [sortKey, setSortKey] = useState(0)
 
-  useEffect(() => { setSortKey(k => k + 1) }, [typeIdx])
+  useEffect(() => { setSortKey(k => k + 1) }, [category])
 
   const handleSort = useCallback((field: SortField) => {
     const newDir = field === sortField ? (sortDir === 'desc' ? 'asc' : 'desc') : 'desc'
@@ -47,27 +59,22 @@ export const TypeDetail = memo(function TypeDetail({ typeIdx, onSelect }: Props)
     setSortKey(k => k + 1)
   }, [sortField, sortDir])
 
-  const sorted = useMemo(() =>
-    [...cards.filter(c => c.Type === typeIdx)].sort((a, b) => {
+  const sorted = useMemo(() => {
+    const base = category === 'monster'
+      ? cards.filter(c => c.Type < 20)
+      : cards.filter(c => FIELD_IDS.has(c.Id))
+    return [...base].sort((a, b) => {
       const av = a[sortField] as number
       const bv = b[sortField] as number
       return sortDir === 'desc' ? bv - av : av - bv
-    }),
-    [typeIdx, sortField, sortDir]
-  )
-
-  if (sorted.length === 0) return null
+    })
+  }, [category, sortField, sortDir])
 
   return (
     <div className="pb-8">
       <div className="flex items-center gap-3 px-4 py-4 border-b border-[#151520]">
-        {img && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt={name} width={32} height={32}
-            style={{ width: 32, height: 32, objectFit: 'contain' }} />
-        )}
         <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold" style={{ color }}>{name}</div>
+          <div className="text-base font-semibold" style={{ color: meta.color }}>{meta.label}</div>
           <div className="text-[10px] text-[#555] uppercase tracking-widest mt-0.5">
             {sorted.length} cards
           </div>
@@ -81,9 +88,9 @@ export const TypeDetail = memo(function TypeDetail({ typeIdx, onSelect }: Props)
                 onClick={() => handleSort(key)}
                 className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-sm border transition-colors"
                 style={{
-                  borderColor: active ? color : '#1a1a28',
-                  color: active ? color : '#444',
-                  background: active ? `${color}15` : 'transparent',
+                  borderColor: active ? meta.color : '#1a1a28',
+                  color: active ? meta.color : '#444',
+                  background: active ? `${meta.color}15` : 'transparent',
                 }}
               >
                 {label}{active ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
