@@ -302,7 +302,13 @@ export function SearchPage() {
 
   const handleClear = useCallback(() => {
     setQuery('')
-    if (!hasSelection) return
+    if (!hasSelection) {
+      if (searchParams.toString()) {
+        const dest = game !== DEFAULT_GAME ? `${pathname}?game=${game}` : pathname
+        router.replace(dest, { scroll: false })
+      }
+      return
+    }
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
     setFadingOut(true)
     fadeTimerRef.current = setTimeout(() => {
@@ -311,7 +317,7 @@ export function SearchPage() {
       const dest = game !== DEFAULT_GAME ? `${pathname}?game=${game}` : pathname
       router.push(dest, { scroll: false })
     }, FADE_MS)
-  }, [hasSelection, pathname, router, game]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSelection, pathname, router, game, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hasSelection && !fadingOut &&
