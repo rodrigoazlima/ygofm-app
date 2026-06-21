@@ -3,6 +3,8 @@
 import { memo } from 'react'
 import { TYPE_NAMES, TYPE_IMAGES, TYPE_COLORS, ATTR_NAMES, ATTR_IMAGES, ATTR_COLORS } from '@/lib/constants'
 import { cards } from '@/lib/dataLoader'
+import { npcList } from '@/lib/dropsLoader'
+import { NpcImage } from './NpcImage'
 import type { CategoryId } from './CategoryDetail'
 
 const MONSTER_COUNT = cards.filter(c => c.Type < 20).length
@@ -17,10 +19,11 @@ interface Props {
   onSelectType: (typeIdx: number) => void
   onSelectAttr: (attrIdx: number) => void
   onSelectCategory: (cat: CategoryId) => void
+  onSelectNpc: (npcId: number) => void
 }
 
 export const CategoryBrowser = memo(function CategoryBrowser({
-  onSelectType, onSelectAttr, onSelectCategory,
+  onSelectType, onSelectAttr, onSelectCategory, onSelectNpc,
 }: Props) {
   return (
     <div className="px-4 py-5 space-y-5">
@@ -120,6 +123,26 @@ export const CategoryBrowser = memo(function CategoryBrowser({
               </button>
             )
           })}
+        </div>
+      </div>
+
+      {/* NPC Opponents / Drop Rates */}
+      <div>
+        <div className="text-[9px] uppercase tracking-widest text-[#333] mb-2">
+          NPC Opponents
+          <span className="ml-2 text-[#2a2a3a]">{npcList.length}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {npcList.map(npc => (
+            <button
+              key={npc.id}
+              onClick={() => onSelectNpc(npc.id)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#1a1a28] hover:border-[#2a2a40] transition-colors bg-[#0d0d18]"
+            >
+              <NpcImage slug={npc.slug} name={npc.name} size={22} />
+              <span className="text-[10px] text-[#888]">{npc.name}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

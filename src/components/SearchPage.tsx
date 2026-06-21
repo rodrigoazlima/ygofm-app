@@ -398,6 +398,7 @@ export function SearchPage() {
             onSelectType={handleSelectType}
             onSelectAttr={handleSelectAttr}
             onSelectCategory={handleSelectCategory}
+            onSelectNpc={handleSelectNpc}
           />
         )}
         <CardGrid brightIds={brightIds} isInitial={isInitial} onSelect={handleSelect} />
