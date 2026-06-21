@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Yu-Gi-Oh! Forbidden Memories > Search',
-  description: 'Yu-Gi-Oh Forbidden Memories card search',
+  title: 'Yu-Gi-Oh! > Card Search',
+  description: 'Yu-Gi-Oh card search across classic games',
 }
 
 export const viewport: Viewport = {

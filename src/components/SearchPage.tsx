@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { cards, computeRelatedIds, byId } from '@/lib/dataLoader'
 import { npcList, npcById } from '@/lib/dropsLoader'
 import { TYPE_NAMES, ATTR_NAMES, FIELD_BOOSTS } from '@/lib/constants'
-import { DEFAULT_GAME } from '@/lib/games'
+import { DEFAULT_GAME, getGame } from '@/lib/games'
 import { parseFilters, applyFilters } from '@/lib/filters'
 import type { FilterState } from '@/lib/filters'
 import { Logo } from './Logo'
@@ -332,6 +332,10 @@ export function SearchPage() {
       autocompleteCategories, hasSelection, fadingOut, handleSelect])
 
   useEffect(() => () => { if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current) }, [])
+
+  useEffect(() => {
+    document.title = `Yu-Gi-Oh! ${getGame(game).name} > Card Search`
+  }, [game])
 
   const compact = hasSelection || fadingOut || !!query
 
