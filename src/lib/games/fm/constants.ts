@@ -17,6 +17,30 @@ export const STAR_NAMES = [
   'Neptune', 'Mercury', 'Sun', 'Moon', 'Venus',
 ]
 
+export const GUARDIAN_STAR_SYMBOLS: Record<string, string> = {
+  Sun: '☉', Mercury: '☿', Venus: '♀', Moon: '☾',
+  Mars: '♂', Jupiter: '♃', Saturn: '♄', Uranus: '⛢',
+  Neptune: '♆', Pluto: '♇',
+}
+
+export const GUARDIAN_STAR_STRONG: Record<string, string> = {
+  Sun: 'Moon', Mercury: 'Sun', Venus: 'Mercury', Moon: 'Venus',
+  Mars: 'Jupiter', Jupiter: 'Saturn', Saturn: 'Uranus', Uranus: 'Pluto',
+  Neptune: 'Mars', Pluto: 'Neptune',
+}
+
+export const GUARDIAN_STAR_WEAK: Record<string, string> = {
+  Sun: 'Mercury', Mercury: 'Venus', Venus: 'Moon', Moon: 'Sun',
+  Mars: 'Neptune', Jupiter: 'Mars', Saturn: 'Jupiter', Uranus: 'Saturn',
+  Neptune: 'Pluto', Pluto: 'Uranus',
+}
+
+export const GUARDIAN_STAR_COLORS: Record<string, string> = {
+  Sun: '#d4a82a', Mercury: '#9944cc', Venus: '#cc77dd', Moon: '#7766aa',
+  Mars: '#cc4422', Jupiter: '#4a8a3a', Saturn: '#5599aa', Uranus: '#7a6644',
+  Neptune: '#3366bb', Pluto: '#999922',
+}
+
 export const ATTR_NAMES = ['Dark', 'Earth', 'Fire', 'Light', 'Water', 'Wind', 'Divine']
 
 export const ATTR_COLORS: Record<string, string> = {

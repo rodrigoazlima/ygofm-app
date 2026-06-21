@@ -3,7 +3,7 @@
 import { memo, useState } from 'react'
 import type { Card } from '@/lib/types'
 import { byId } from '@/lib/dataLoader'
-import { TYPE_NAMES, ATTR_NAMES, STAR_NAMES, TYPE_COLORS, TYPE_IMAGES, ATTR_IMAGES, ATTR_COLORS, FIELD_BOOSTS, atkColor } from '@/lib/constants'
+import { TYPE_NAMES, ATTR_NAMES, STAR_NAMES, TYPE_COLORS, TYPE_IMAGES, ATTR_IMAGES, ATTR_COLORS, FIELD_BOOSTS, atkColor, GUARDIAN_STAR_SYMBOLS, GUARDIAN_STAR_STRONG, GUARDIAN_STAR_WEAK, GUARDIAN_STAR_COLORS } from '@/lib/constants'
 import { fullSources } from '@/lib/imageHelpers'
 import { useCardRelations } from '@/hooks/useCardRelations'
 import { FusesIntoSection } from './sections/FusesIntoSection'
@@ -168,9 +168,33 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
               {card.Level > 0 && (
                 <div className="text-[10px] text-[#666] mb-1">
                   {'★'.repeat(Math.min(card.Level, 12))}
-                  <span className="ml-2">
-                    {STAR_NAMES[card.GuardianStarA]} / {STAR_NAMES[card.GuardianStarB]}
-                  </span>
+                </div>
+              )}
+              {STAR_NAMES[card.GuardianStarA] && (
+                <div className="flex gap-3 mb-1 flex-wrap">
+                  {[card.GuardianStarA, card.GuardianStarB].map((idx, i) => {
+                    const name = STAR_NAMES[idx]
+                    if (!name) return null
+                    const sym = GUARDIAN_STAR_SYMBOLS[name] ?? name
+                    const color = GUARDIAN_STAR_COLORS[name] ?? '#555'
+                    const strongName = GUARDIAN_STAR_STRONG[name]
+                    const weakName = GUARDIAN_STAR_WEAK[name]
+                    const strongSym = GUARDIAN_STAR_SYMBOLS[strongName] ?? strongName
+                    const weakSym = GUARDIAN_STAR_SYMBOLS[weakName] ?? weakName
+                    return (
+                      <div key={i} className="flex items-center gap-1">
+                        <span className="text-[14px] leading-none" style={{ color }}>{sym}</span>
+                        <div className="flex flex-col leading-none">
+                          <span className="text-[9px]" style={{ color }}>{name}</span>
+                          <span className="text-[8px] text-[#444] font-mono">
+                            <span style={{ color: '#3a7a4a' }} title={`Strong vs ${strongName}`}>▲{strongSym}</span>
+                            {' '}
+                            <span style={{ color: '#7a3a3a' }} title={`Weak vs ${weakName}`}>▼{weakSym}</span>
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </>

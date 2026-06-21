@@ -10,6 +10,7 @@ import { fullSources } from '@/lib/imageHelpers'
 import {
   TYPE_NAMES, ATTR_NAMES, TYPE_COLORS, ATTR_COLORS,
   TYPE_IMAGES, ATTR_IMAGES, STAR_NAMES, atkColor,
+  GUARDIAN_STAR_SYMBOLS, GUARDIAN_STAR_STRONG, GUARDIAN_STAR_WEAK, GUARDIAN_STAR_COLORS,
 } from '@/lib/constants'
 
 type TipData =
@@ -108,8 +109,25 @@ function CardTip({ card, pos }: { card: Card; pos: Pos }) {
               <span className="text-[#505060]">{card.Defense}</span>
             </div>
             {STAR_NAMES[card.GuardianStarA] && (
-              <div className="text-[9px] text-[#444] mb-1">
-                {STAR_NAMES[card.GuardianStarA]} · {STAR_NAMES[card.GuardianStarB]}
+              <div className="mb-1 space-y-0.5">
+                {[card.GuardianStarA, card.GuardianStarB].map((idx, i) => {
+                  const name = STAR_NAMES[idx]
+                  if (!name) return null
+                  const sym = GUARDIAN_STAR_SYMBOLS[name] ?? name
+                  const color = GUARDIAN_STAR_COLORS[name] ?? '#555'
+                  const strongName = GUARDIAN_STAR_STRONG[name]
+                  const weakName = GUARDIAN_STAR_WEAK[name]
+                  const strongSym = GUARDIAN_STAR_SYMBOLS[strongName] ?? strongName
+                  const weakSym = GUARDIAN_STAR_SYMBOLS[weakName] ?? weakName
+                  return (
+                    <div key={i} className="flex items-center gap-1">
+                      <span className="text-[12px] leading-none shrink-0" style={{ color }}>{sym}</span>
+                      <span className="text-[9px] leading-none flex-1" style={{ color }}>{name}</span>
+                      <span className="text-[9px] font-mono leading-none" style={{ color: '#4a8' }} title={`Strong vs ${strongName}`}>▲{strongSym}</span>
+                      <span className="text-[9px] font-mono leading-none ml-0.5" style={{ color: '#a44' }} title={`Weak vs ${weakName}`}>▼{weakSym}</span>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </>
