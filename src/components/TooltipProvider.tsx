@@ -108,10 +108,10 @@ function CardTip({ card, pos }: { card: Card; pos: Pos }) {
               <span className="text-[#2a2a3a]">/</span>
               <span className="text-[#505060]">{card.Defense}</span>
             </div>
-            {STAR_NAMES[card.GuardianStarA] && (
+            {STAR_NAMES[card.GuardianStarA - 1] && (
               <div className="mb-1 space-y-0.5">
                 {[card.GuardianStarA, card.GuardianStarB].map((idx, i) => {
-                  const name = STAR_NAMES[idx]
+                  const name = STAR_NAMES[idx - 1]
                   if (!name) return null
                   const sym = GUARDIAN_STAR_SYMBOLS[name] ?? name
                   const color = GUARDIAN_STAR_COLORS[name] ?? '#555'

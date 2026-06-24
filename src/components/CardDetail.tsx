@@ -170,10 +170,10 @@ export const CardDetail = memo(function CardDetail({ cardId, onSelect, onSelectN
                   {'★'.repeat(Math.min(card.Level, 12))}
                 </div>
               )}
-              {STAR_NAMES[card.GuardianStarA] && (
+              {STAR_NAMES[card.GuardianStarA - 1] && (
                 <div className="flex gap-3 mb-1 flex-wrap">
                   {[card.GuardianStarA, card.GuardianStarB].map((idx, i) => {
-                    const name = STAR_NAMES[idx]
+                    const name = STAR_NAMES[idx - 1]
                     if (!name) return null
                     const sym = GUARDIAN_STAR_SYMBOLS[name] ?? name
                     const color = GUARDIAN_STAR_COLORS[name] ?? '#555'
